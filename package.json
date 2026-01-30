@@ -2,16 +2,21 @@
   "name": "feedbot-next",
   "version": "1.0.0",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "tsx src/main.ts"
   },
   "keywords": [],
-  "author": "",
+  "author": "Rebecca Earle",
   "license": "ISC",
   "description": "",
   "dependencies": {
     "@types/node": "^25.1.0",
     "csv-parse": "^6.1.0",
     "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0"
   }
 }
