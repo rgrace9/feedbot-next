@@ -13,4 +13,5 @@ export interface GroupedError {
   unique_submissions: number;
   percentage: string;
   example_original_text: string;
+  example_original_text_2?: string;
 }

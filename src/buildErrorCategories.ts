@@ -16,25 +16,95 @@ export const BUILD_ERROR_CATEGORIES: ErrorCategory[] = [
       /unsupported class major version \d+/i,
       /unsupported class (?:file )?major version (?:\d+|x)/i,
       /has been compiled by a more recent version of the Java Runtime/i,
+      /UnsupportedClassVersionError/i,
+      /major\.minor version/i,
+      /source (?:level|option) \d+ is no longer supported/i,
+      /target (?:release|option) \d+ (?:is )?not supported/i,
+      /invalid target release: \d+/i,
     ],
     description: "Code compiled with newer Java version than runtime supports",
     studentFriendlyMessage:
       "Your code was compiled with a different Java version. Check your Java SDK settings.",
   },
-  // NullAway and nullability violations
+  // Java toolchain missing or incompatible
+  {
+    id: "java_toolchain_missing",
+    name: "Java Toolchain Not Found",
+    patterns: [
+      /Cannot find a Java installation matching this task'?s? requirements/i,
+      /No matching toolchain/i,
+      /Could not target platform: 'Java SE \d+' using tool chain/i,
+      /Failed to calculate the value of task ':[^']+' property 'javaCompiler'/i,
+      /property 'javaCompiler'/i,
+    ],
+    description:
+      "Gradle could not resolve a Java toolchain matching the requested language version/vendor",
+    studentFriendlyMessage:
+      "The build needs a different Java version than what's available. Ensure the required JDK is installed and configured.",
+  },
+  // NullAway specific subcategories (beginner-friendly)
+  {
+    id: "nullaway_param_nullable",
+    name: "NullAway: Nullable Parameter",
+    patterns: [
+      /error: \[NullAway\] passing @Nullable .* where @NonNull is required/i,
+    ],
+    description:
+      "Passing a @Nullable value where a @NonNull parameter is required",
+    studentFriendlyMessage:
+      "A method received a null where it requires a non-null. Fix: add a null check or provide a non-null value.",
+  },
+  {
+    id: "nullaway_field_assignment",
+    name: "NullAway: Nullable Field Assignment",
+    patterns: [
+      /error: \[NullAway\] assigning @Nullable expression to @NonNull field/i,
+    ],
+    description:
+      "Assigning a @Nullable expression to a field annotated @NonNull",
+    studentFriendlyMessage:
+      "Assigning a possibly-null value to a non-null field. Fix: ensure the value is non-null or change the field to @Nullable.",
+  },
+  {
+    id: "nullaway_return_nullable",
+    name: "NullAway: Nullable Return",
+    patterns: [
+      /error: \[NullAway\] returning @Nullable expression from method with @NonNull return type/i,
+    ],
+    description:
+      "Returning a @Nullable expression from a method with @NonNull return type",
+    studentFriendlyMessage:
+      "Returning a possibly-null value from a method that must return non-null. Fix: return a non-null value or update the method’s annotation.",
+  },
+  {
+    id: "nullaway_deref_nullable",
+    name: "NullAway: Nullable Dereference",
+    patterns: [/error: \[NullAway\] dereferenced expression .* is @Nullable/i],
+    description: "Dereferencing an expression that may be null",
+    studentFriendlyMessage:
+      "Dereferencing a value that might be null. Fix: check for null before using it.",
+  },
+  // NullAway catch-all
   {
     id: "nullability_error",
     name: "Nullability Error",
-    patterns: [
-      /\[NullAway\]/i,
-      /passing @Nullable .* where @NonNull is required/i,
-      /assigning @Nullable expression to @NonNull field/i,
-      /returning @Nullable expression from method with @NonNull return type/i,
-      /dereferenced expression .* is @Nullable/i,
-    ],
+    patterns: [/\[NullAway\]/i],
     description: "Code violates @NonNull/@Nullable contracts (NullAway)",
     studentFriendlyMessage:
       "A value that can be null is used where a non-null is required. Double-check null checks and annotations.",
+  },
+  // Failing tests summary
+  {
+    id: "failing_tests",
+    name: "Failing Tests",
+    patterns: [
+      /There were failing tests/i,
+      /There were \d+ failing tests/i,
+      /Failed tests:/i,
+    ],
+    description: "The test suite reported failing tests",
+    studentFriendlyMessage:
+      "Some tests failed. Open the test report shown in the logs and fix the failing test cases.",
   },
   // Symbol missing
   {
@@ -156,9 +226,7 @@ export const BUILD_ERROR_CATEGORIES: ErrorCategory[] = [
     name: "Checkstyle Violation",
     patterns: [
       /Checkstyle rule violations were found/i,
-      /org\.gradle\.api\.plugins\.quality\.internal\.CheckstyleAction/i,
-      /:checkstyleMain/i,
-      /:checkstyleTest/i,
+      /Checkstyle violations were found/i,
     ],
     description: "Checkstyle reported coding style violations",
     studentFriendlyMessage:

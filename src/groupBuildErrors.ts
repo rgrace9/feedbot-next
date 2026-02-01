@@ -58,16 +58,27 @@ export function groupBuildErrors(csvPath: string): GroupedError[] {
     // Categorize (try raw first, then normalized as fallback)
     let category = categorizeError(coreError);
     // Special-case: detect Java version mismatch anywhere in raw output
-    if (
-      !category &&
-      /unsupported class (?:file )?major version (?:\d+|x)/i.test(rawOutput)
-    ) {
-      category = {
-        id: "java_version_mismatch",
-        name: "Java Version Incompatibility",
-        patterns: [],
-        description: "",
-      } as any;
+    if (!category) {
+      const javaMismatchRaw =
+        /UnsupportedClassVersionError/i.test(rawOutput) ||
+        /unsupported class (?:file )?major version (?:\d+|x)/i.test(
+          rawOutput,
+        ) ||
+        /has been compiled by a more recent version/i.test(rawOutput) ||
+        /major\.minor version/i.test(rawOutput) ||
+        /source (?:level|option) \d+ is no longer supported/i.test(rawOutput) ||
+        /target (?:release|option) \d+ (?:is )?not supported/i.test(
+          rawOutput,
+        ) ||
+        /invalid target release: \d+/i.test(rawOutput);
+      if (javaMismatchRaw) {
+        category = {
+          id: "java_version_mismatch",
+          name: "Java Version Incompatibility",
+          patterns: [],
+          description: "",
+        } as any;
+      }
     }
     if (!category) {
       category = categorizeError(normalized);
@@ -107,24 +118,29 @@ export function groupBuildErrors(csvPath: string): GroupedError[] {
 
   // Convert to output format
   const grouped: GroupedError[] = [];
-  let errorId = 1;
 
   for (const group of groups.values()) {
     const percentage = ((group.occurrences / records.length) * 100).toFixed(1);
 
     grouped.push({
-      error_id: errorId++,
+      error_id: 0, // assign after sorting
       error_category: group.categoryId,
       normalized_message: group.normalizedMessage,
       occurrence_count: group.occurrences,
       unique_submissions: group.submissionIds.size,
       percentage: `${percentage}%`,
       example_original_text: group.examples[0] || "",
+      example_original_text_2: group.examples[1] || "",
     });
   }
 
   // Sort by occurrence count (most common first)
   grouped.sort((a, b) => b.occurrence_count - a.occurrence_count);
+
+  // Assign sequential IDs after sorting
+  grouped.forEach((g, idx) => {
+    g.error_id = idx + 1;
+  });
 
   return grouped;
 }

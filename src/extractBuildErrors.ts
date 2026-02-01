@@ -1,13 +1,15 @@
 // Extract the core error from verbose Gradle output
 export function extractCoreError(output: string): string {
   const lines = output.split("\n");
-
+  if (!lines || lines.length === 0) {
+    throw new Error("No output lines to extract error from");
+  }
   // 1) Prefer Gradle build error block
   for (let i = 0; i < lines.length; i++) {
-    if (lines[i].includes("* What went wrong:")) {
+    if (lines[i]?.includes("* What went wrong:")) {
       const errorLines: string[] = [];
       errorLines.push(lines[i]);
-      for (let j = i + 1; j < Math.min(i + 6, lines.length); j++) {
+      for (let j = i + 1; j < Math.min(i + 30, lines.length); j++) {
         const line = lines[j];
         if (!line) break;
         if (line.includes("* Try:")) break; // end of error section
@@ -25,7 +27,7 @@ export function extractCoreError(output: string): string {
     ) {
       const errorLines: string[] = [];
       errorLines.push(lines[i].trim());
-      for (let j = i + 1; j < Math.min(i + 6, lines.length); j++) {
+      for (let j = i + 1; j < Math.min(i + 30, lines.length); j++) {
         const line = lines[j];
         if (!line) break;
         // stop at next blank preamble or build tips
@@ -61,6 +63,9 @@ export function normalizeError(errorMsg: string): string {
   normalized = normalized.replace(/\/[^\s]+\.jar/g, "<path>");
   normalized = normalized.replace(/file:\/\/[^\s)]+/g, "<path>");
   normalized = normalized.replace(/\/[A-Za-z0-9_\-\/\.]+/g, "<path>");
+  // Windows-style paths (e.g., C:\\Users\\...)
+  normalized = normalized.replace(/[A-Za-z]:\\\\[^\s)]+/g, "<path>");
+  normalized = normalized.replace(/\\[A-Za-z0-9_\-\\\.]+/g, "<path>");
 
   // Remove line/column numbers
   normalized = normalized.replace(/line \d+/gi, "line X");
@@ -76,6 +81,16 @@ export function normalizeError(errorMsg: string): string {
   normalized = normalized.replace(
     /\bclass\s+['"]?[A-Z][A-Za-z0-9_]*['"]?/g,
     "class X",
+  );
+
+  // Normalize dynamic counts in common messages
+  normalized = normalized.replace(
+    /There were \d+ lint error\(s\)/gi,
+    "There were X lint error(s)",
+  );
+  normalized = normalized.replace(
+    /There were \d+ failing tests/gi,
+    "There were X failing tests",
   );
 
   // Normalize whitespace
