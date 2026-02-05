@@ -6,9 +6,10 @@ export function extractCoreError(output: string): string {
   }
   // 1) Prefer Gradle build error block
   for (let i = 0; i < lines.length; i++) {
-    if (lines[i]?.includes("* What went wrong:")) {
+    const li = lines[i] ?? "";
+    if (li.includes("* What went wrong:")) {
       const errorLines: string[] = [];
-      errorLines.push(lines[i]);
+      errorLines.push(li);
       for (let j = i + 1; j < Math.min(i + 30, lines.length); j++) {
         const line = lines[j];
         if (!line) break;
@@ -21,12 +22,10 @@ export function extractCoreError(output: string): string {
 
   // 2) Detect failing tests summary
   for (let i = 0; i < lines.length; i++) {
-    if (
-      /There were failing tests/i.test(lines[i]) ||
-      /Failed tests:/i.test(lines[i])
-    ) {
+    const li = lines[i] ?? "";
+    if (/There were failing tests/i.test(li) || /Failed tests:/i.test(li)) {
       const errorLines: string[] = [];
-      errorLines.push(lines[i].trim());
+      errorLines.push(li.trim());
       for (let j = i + 1; j < Math.min(i + 30, lines.length); j++) {
         const line = lines[j];
         if (!line) break;
