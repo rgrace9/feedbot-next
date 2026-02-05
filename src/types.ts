@@ -36,4 +36,5 @@ export interface GroupedAssignmentLLMRow {
   errorType: string; // e.g., "NOT_IMPLEMENTED"
   errorMessage: string; // cleaned plain text message
   assignmentContext?: string; // record.part or similar
+  count?: number;
 }

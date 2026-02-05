@@ -25,6 +25,18 @@ interface ErrorGroup {
   assignmentContextCounts: Map<string, number>;
 }
 
+interface ErrorGroup {
+  fingerprint: string;
+  categoryId: string;
+  categoryName: string;
+  testName: string;
+  normalizedMessage: string;
+  occurrences: number;
+  submissionIds: Set<string>;
+  examples: string[];
+  assignmentContextCounts: Map<string, number>;
+}
+
 const inputFile = "./data/assignment_test_failures.csv";
 const outputFile = "./data/grouped_assignment_test_failures.csv";
 
@@ -56,23 +68,26 @@ export function groupAssignmentErrors(csvPath = inputFile): GroupedError[] {
     const core = extractAssignmentCore(raw);
     const normalized = normalizeAssignmentError(core);
 
-    let category =
+    const category =
       categorizeAssignmentError(core) || categorizeAssignmentError(normalized);
     const categoryId = category?.id || "unknown";
     const categoryName = category?.name || "Unknown Error";
-
-    const fingerprint = createFingerprint(normalized, categoryId);
+    const testName = (record.name || "Unknown Test").trim();
+    const fingerprint = createFingerprint(
+      normalized,
+      `${categoryId}::${testName}`,
+    );
 
     if (!groups.has(fingerprint)) {
       groups.set(fingerprint, {
         fingerprint,
         categoryId,
         categoryName,
+        testName,
         normalizedMessage: normalized,
         occurrences: 0,
         submissionIds: new Set<string>(),
         examples: [],
-        testNameCounts: new Map<string, number>(),
         assignmentContextCounts: new Map<string, number>(),
       });
     }
@@ -81,13 +96,7 @@ export function groupAssignmentErrors(csvPath = inputFile): GroupedError[] {
     if (record.grader_result_id)
       group.submissionIds.add(record.grader_result_id);
     if (group.examples.length < 2) group.examples.push(core);
-    const testName = (record.name || "").trim();
     const part = (record.part || "").trim();
-    if (testName)
-      group.testNameCounts.set(
-        testName,
-        (group.testNameCounts.get(testName) || 0) + 1,
-      );
     if (part)
       group.assignmentContextCounts.set(
         part,
@@ -130,15 +139,19 @@ export function writeAssignmentGroupedCSV(
     "percentage",
     "example_original_text",
   ];
-  const rows = grouped.map((g) => [
-    g.error_id,
-    g.error_category,
-    `"${g.normalized_message.replace(/"/g, '""')}"`,
-    g.occurrence_count,
-    g.unique_submissions,
-    g.percentage,
-    `"${g.example_original_text.replace(/"/g, '""')}"`,
-  ]);
+  const rows = grouped.map((g) => {
+    const norm = (g.normalized_message || "").replace(/"/g, '""');
+    const ex = (g.example_original_text || "").replace(/"/g, '""');
+    return [
+      g.error_id,
+      g.error_category,
+      `"${norm}"`,
+      g.occurrence_count,
+      g.unique_submissions,
+      g.percentage,
+      `"${ex}"`,
+    ];
+  });
   const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
   writeFileSync(outputPath, csv);
   console.log(`\n✅ Wrote grouped assignment errors to ${outputPath}`);
@@ -159,16 +172,11 @@ function getModeValue(counts: Map<string, number>): string {
 export function buildAssignmentLLMRows(
   csvPath = inputFile,
 ): GroupedAssignmentLLMRow[] {
-  const grouped = groupAssignmentErrors(csvPath);
-  // Reconstruct groups with metadata mode values
   const content = readFileSync(csvPath, "utf-8");
   const records: AssignmentErrorRecord[] = parse(content, {
     columns: true,
     skip_empty_lines: true,
   });
-  const groupsMeta = new Map<string, ErrorGroup>();
-
-  // Re-run to collect metadata maps identically
   const tmpGroups = new Map<string, ErrorGroup>();
   for (const record of records) {
     const raw = getOutputText(record);
@@ -179,30 +187,28 @@ export function buildAssignmentLLMRows(
       categorizeAssignmentError(core) || categorizeAssignmentError(normalized);
     const categoryId = category?.id || "unknown";
     const categoryName = category?.name || "Unknown Error";
-    const fingerprint = createFingerprint(normalized, categoryId);
+    const testName = (record.name || "Unknown Test").trim();
+    const fingerprint = createFingerprint(
+      normalized,
+      `${categoryId}::${testName}`,
+    );
     if (!tmpGroups.has(fingerprint)) {
       tmpGroups.set(fingerprint, {
         fingerprint,
         categoryId,
         categoryName,
+        testName,
         normalizedMessage: normalized,
         occurrences: 0,
         submissionIds: new Set<string>(),
         examples: [],
-        testNameCounts: new Map<string, number>(),
         assignmentContextCounts: new Map<string, number>(),
       });
     }
     const grp = tmpGroups.get(fingerprint)!;
     grp.occurrences++;
     if (grp.examples.length < 1) grp.examples.push(core);
-    const testName = (record.name || "").trim();
     const part = (record.part || "").trim();
-    if (testName)
-      grp.testNameCounts.set(
-        testName,
-        (grp.testNameCounts.get(testName) || 0) + 1,
-      );
     if (part)
       grp.assignmentContextCounts.set(
         part,
@@ -212,7 +218,7 @@ export function buildAssignmentLLMRows(
 
   const rows: GroupedAssignmentLLMRow[] = [];
   for (const grp of tmpGroups.values()) {
-    const testName = getModeValue(grp.testNameCounts);
+    const testName = grp.testName;
     const assignmentContext = getModeValue(grp.assignmentContextCounts);
     const errorType = grp.categoryId.replace(/-/g, "_").toUpperCase();
     const errorCategoryName = testName
@@ -229,6 +235,7 @@ export function buildAssignmentLLMRows(
       errorType,
       errorMessage: cleanText,
       assignmentContext: assignmentContext || "",
+      count: grp.occurrences,
     });
   }
 
@@ -240,22 +247,25 @@ export function writeAssignmentLLMCSV(
   outputPath = "./data/grouped_assignment_errors_structured.csv",
 ): void {
   const headers = [
-    "Error Category",
-    "Test Name",
-    "Error Type",
-    "Error Message",
-    "Assignment Context",
+    "csvcategory",
+    "test_name",
+    "error_type",
+    "count",
+    "clean_error_text",
   ];
-  const csvRows = rows.map((r) => [
-    `"${(r.errorCategory || "").replace(/"/g, '""')}"`,
-    `"${(r.testName || "").replace(/"/g, '""')}"`,
-    r.errorType,
-    `"${(r.errorMessage || "").replace(/"/g, '""')}"`,
-    `"${(r.assignmentContext || "").replace(/"/g, '""')}"`,
-  ]);
-  const csv = [headers.join(","), ...csvRows.map((r) => r.join(","))].join(
-    "\n",
-  );
+
+  const csvRows = rows.map((r) => {
+    const csvcategory = `"${(r.errorCategory || "").replace(/"/g, '""')}"`;
+    const test_name = `"${(r.testName || "").replace(/"/g, '""')}"`;
+    const error_type = r.errorType || "";
+    const count = (r.count ?? 0).toString();
+    const clean_error_text = `"${(r.errorMessage || "").replace(/"/g, '""')}"`;
+    return [csvcategory, test_name, error_type, count, clean_error_text].join(
+      ",",
+    );
+  });
+
+  const csv = [headers.join(","), ...csvRows].join("\n");
   writeFileSync(outputPath, csv);
   console.log(`\n🧾 Wrote structured LLM assignment errors to ${outputPath}`);
 }

@@ -13,7 +13,7 @@ console.log("🧪 Grouping assignment test failures...\n");
 
 const grouped = groupAssignmentErrors(inputFile);
 
-console.log("\n📊 🧠 Top Assignment Error Patterns:\n");
+console.log("\n📊 🧠 Top Assignment Error Patterns by Category and Test:\n");
 
 const categoryMap = new Map(ASSIGNMENT_ERROR_CATEGORIES.map((c) => [c.id, c]));
 
@@ -113,3 +113,33 @@ writeAssignmentLLMCSV(
   llmRows,
   "./data/grouped_assignment_errors_structured.csv",
 );
+
+// Revised daily update: summarize by category → test name subgroups
+const byCategory = new Map<
+  string,
+  { name: string; tests: Map<string, number> }
+>();
+llmRows.forEach((row) => {
+  const cat = ASSIGNMENT_ERROR_CATEGORIES.find(
+    (c) => c.id.replace(/-/g, "_").toUpperCase() === row.errorType,
+  );
+  const catName = cat?.name || row.errorType;
+  const key = row.errorType;
+  if (!byCategory.has(key))
+    byCategory.set(key, { name: catName, tests: new Map() });
+  const entry = byCategory.get(key)!;
+  const tn = row.testName || "Unknown Test";
+  entry.tests.set(tn, (entry.tests.get(tn) || 0) + (row.count || 0));
+});
+
+console.log(
+  "\nErrors are grouped by category, then by test name. For example, 'Dependency Not Met' has 5 subgroups (one per test), 'Mutation Testing' has 5 subgroups, etc. This allows generating specific hints like 'Fix your MeasuredIngredient tests' rather than generic 'Fix your tests'.\n",
+);
+for (const { name, tests } of byCategory.values()) {
+  const topTests = Array.from(tests.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+  console.log(`${name}:`);
+  topTests.forEach(([t, n]) => console.log(`  - ${t} (${n} errors)`));
+  console.log();
+}
