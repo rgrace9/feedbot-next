@@ -54,6 +54,18 @@ export function extractCoreError(output: string): string {
 // Normalize error message for grouping
 export function normalizeError(errorMsg: string): string {
   let normalized = errorMsg;
+  normalized = normalized.replace(
+    /file:\/\/\/home\/runner\/_work\/sp26-cyb1-[^/]+\/sp26-cyb1-[^/]+/gi,
+    "sp26-cyb1-[REDACTED]",
+  );
+  normalized = normalized.replace(
+    /\/home\/runner\/_work\/sp26-cyb1-[^/]+/gi,
+    "sp26-cyb1-[REDACTED]",
+  );
+  normalized = normalized.replace(
+    /sp26-cyb1-[A-Za-z0-9_-]+/gi,
+    "sp26-cyb1-[REDACTED]",
+  );
 
   // Remove specific version numbers
   normalized = normalized.replace(/major version \d+/gi, "major version X");
@@ -61,8 +73,6 @@ export function normalizeError(errorMsg: string): string {
 
   // Remove file paths
   normalized = normalized.replace(/\/[^\s]+\.jar/g, "<path>");
-  normalized = normalized.replace(/file:\/\/[^\s)]+/g, "<path>");
-  normalized = normalized.replace(/\/[A-Za-z0-9_\-\/\.]+/g, "<path>");
   // Windows-style paths (e.g., C:\\Users\\...)
   normalized = normalized.replace(/[A-Za-z]:\\\\[^\s)]+/g, "<path>");
   normalized = normalized.replace(/\\[A-Za-z0-9_\-\\\.]+/g, "<path>");

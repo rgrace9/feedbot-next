@@ -17,6 +17,16 @@ function summarize(text: string, max = 200) {
   return text.replace(/\s+/g, " ").trim().slice(0, max);
 }
 
+function sanitizePaths(text: string): string {
+  return text
+    .replace(
+      /file:\/\/\/home\/runner\/_work\/sp26-cyb1-[^/]+\/sp26-cyb1-[^/]+/gi,
+      "sp26-cyb1-[REDACTED]",
+    )
+    .replace(/\/home\/runner\/_work\/sp26-cyb1-[^/]+/gi, "sp26-cyb1-[REDACTED]")
+    .replace(/sp26-cyb1-[A-Za-z0-9_-]+/gi, "sp26-cyb1-[REDACTED]");
+}
+
 function extractFocusedLines(
   example: string,
   focus: RegExp,
@@ -77,7 +87,7 @@ grouped.slice(0, 10).forEach((error, idx) => {
   console.log(
     `${idx + 1}. ${title} — ${error.occurrence_count} occurrences (${error.percentage})`,
   );
-  console.log(`Summary: ${summarize(error.normalized_message)}`);
+  console.log(`Summary: ${sanitizePaths(summarize(error.normalized_message))}`);
 
   const ex1 = formatExampleBlock(
     error.example_original_text,
@@ -89,8 +99,8 @@ grouped.slice(0, 10).forEach((error, idx) => {
   );
   if (ex1 || ex2) {
     console.log("Examples:");
-    if (ex1) ex1.forEach((l) => console.log(`  • ${l}`));
-    if (ex2) ex2.forEach((l) => console.log(`  • ${l}`));
+    if (ex1) ex1.forEach((l) => console.log(`  • ${sanitizePaths(l)}`));
+    if (ex2) ex2.forEach((l) => console.log(`  • ${sanitizePaths(l)}`));
   }
 
   if (cat?.studentFriendlyMessage) {
@@ -107,7 +117,7 @@ if (javaVersionGroups.length) {
   console.log(
     "------------------------------------------------------------------------",
   );
-  console.log("Java Version Issues (always shown):\n");
+  console.log("Java Version Issues:\n");
   javaVersionGroups.slice(0, 5).forEach((g) => {
     const cat = categoryMap.get(g.error_category);
     const title = cat?.name || g.error_category;
@@ -115,7 +125,7 @@ if (javaVersionGroups.length) {
       `• ${title} — ${g.occurrence_count} occurrences (${g.percentage})`,
     );
     const ex = formatExampleBlock(g.example_original_text, g.error_category);
-    if (ex) ex.forEach((l) => console.log(`   ${l}`));
+    if (ex) ex.forEach((l) => console.log(`   ${sanitizePaths(l)}`));
     if (cat?.studentFriendlyMessage) {
       console.log(`   Tip: ${cat.studentFriendlyMessage}`);
     }

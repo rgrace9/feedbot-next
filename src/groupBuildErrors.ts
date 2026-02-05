@@ -17,6 +17,15 @@ interface ErrorGroup {
   submissionIds: Set<string>;
   examples: string[];
 }
+function sanitizePaths(text: string): string {
+  return text
+    .replace(
+      /file:\/\/\/home\/runner\/_work\/sp26-cyb1-[^/]+\/sp26-cyb1-[^/]+/gi,
+      "sp26-cyb1-[REDACTED]",
+    )
+    .replace(/\/home\/runner\/_work\/sp26-cyb1-[^/]+/gi, "sp26-cyb1-[REDACTED]")
+    .replace(/sp26-cyb1-[A-Za-z0-9_-]+/gi, "sp26-cyb1-[REDACTED]");
+}
 
 export function groupBuildErrors(csvPath: string): GroupedError[] {
   // Read CSV
@@ -85,16 +94,22 @@ export function groupBuildErrors(csvPath: string): GroupedError[] {
     }
     const categoryId = category?.id || "unknown";
     const categoryName = category?.name || "Unknown Error";
+    let effectiveCategoryId = categoryId;
+    let effectiveCategoryName = categoryName;
+    if (categoryId === "java_toolchain_missing") {
+      effectiveCategoryId = "java_version_mismatch";
+      effectiveCategoryName = "Java Version Incompatibility";
+    }
 
     // Create fingerprint
-    const fingerprint = createFingerprint(normalized, categoryId);
+    const fingerprint = createFingerprint(normalized, effectiveCategoryId);
 
     // Group
     if (!groups.has(fingerprint)) {
       groups.set(fingerprint, {
         fingerprint,
-        categoryId,
-        categoryName,
+        categoryId: effectiveCategoryId,
+        categoryName: effectiveCategoryName,
         normalizedMessage: normalized,
         occurrences: 0,
         submissionIds: new Set(),
@@ -162,11 +177,11 @@ export function writeGroupedCSV(
   const rows = grouped.map((g) => [
     g.error_id,
     g.error_category,
-    `"${g.normalized_message.replace(/"/g, '""')}"`,
+    `"${sanitizePaths(g.normalized_message).replace(/"/g, '""')}"`,
     g.occurrence_count,
     g.unique_submissions,
     g.percentage,
-    `"${g.example_original_text.replace(/"/g, '""')}"`,
+    `"${sanitizePaths(g.example_original_text).replace(/"/g, '""')}"`,
   ]);
 
   const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
