@@ -1,17 +1,13 @@
 import { ASSIGNMENT_ERROR_CATEGORIES } from "./assignmentCategories";
 import {
   buildAssignmentLLMRows,
-  groupAssignmentErrors,
-  writeAssignmentGroupedCSV,
   writeAssignmentLLMCSV,
 } from "./assignmentGroupErrors";
 
 const inputFile = "./data/assignment_test_failures.csv";
-const outputFile = "./data/grouped_assignment_test_failures.csv";
-
 console.log("🧪 Grouping assignment test failures...\n");
 
-const grouped = groupAssignmentErrors(inputFile);
+const llmRows = buildAssignmentLLMRows(inputFile);
 
 console.log("\n📊 🧠 Top Assignment Error Patterns by Category and Test:\n");
 
@@ -75,44 +71,25 @@ function formatExampleBlock(example?: string, categoryId?: string) {
     .map((l) => l.slice(0, 240));
 }
 
-// Show top 10 in console
-grouped.slice(0, 10).forEach((error, idx) => {
-  const cat = categoryMap.get(error.error_category);
-  const title = cat?.name || error.error_category;
-  console.log(
-    "------------------------------------------------------------------------",
-  );
-  console.log(
-    `${idx + 1}. ${title} — ${error.occurrence_count} occurrences (${error.percentage})`,
-  );
-  console.log(`Summary: ${summarize(error.normalized_message)}`);
-  const ex1 = formatExampleBlock(
-    error.example_original_text,
-    error.error_category,
-  );
-  const ex2 = formatExampleBlock(
-    error.example_original_text_2,
-    error.error_category,
-  );
-  if (ex1 || ex2) {
-    console.log("Examples:");
-    if (ex1) ex1.forEach((l) => console.log(`  • ${l}`));
-    if (ex2) ex2.forEach((l) => console.log(`  • ${l}`));
-  }
-  if (cat?.studentFriendlyMessage)
-    console.log(`Tip: ${cat.studentFriendlyMessage}`);
-  console.log();
-});
+// Show top 10 in console (based on grouped LLM rows)
+llmRows
+  .slice()
+  .sort((a, b) => (b.count || 0) - (a.count || 0))
+  .slice(0, 10)
+  .forEach((row, idx) => {
+    const title = row.errorCategory || row.errorType || "Unknown";
+    console.log(
+      "------------------------------------------------------------------------",
+    );
+    console.log(`${idx + 1}. ${title} — ${row.count || 0} occurrences`);
+    console.log(`Summary: ${summarize(row.errorMessage || "")}`);
+    if (row.assignmentContext) console.log(`Context: ${row.assignmentContext}`);
+    console.log();
+  });
 
-writeAssignmentGroupedCSV(grouped, outputFile);
+// Write structured CSV for LLM hint generation
+writeAssignmentLLMCSV(llmRows);
 console.log("\n✨ Done!");
-
-// Also produce structured CSV for LLM hint generation
-const llmRows = buildAssignmentLLMRows(inputFile);
-writeAssignmentLLMCSV(
-  llmRows,
-  "./data/grouped_assignment_errors_structured.csv",
-);
 
 // Revised daily update: summarize by category → test name subgroups
 const byCategory = new Map<

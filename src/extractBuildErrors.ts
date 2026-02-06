@@ -109,6 +109,8 @@ export function normalizeError(errorMsg: string): string {
 }
 
 // Create fingerprint for grouping
+import { createHash } from "crypto";
+
 export function createFingerprint(
   normalized: string,
   categoryId: string,
@@ -120,6 +122,15 @@ export function createFingerprint(
     hash = hash & hash;
   }
   return Math.abs(hash).toString(36);
+}
+
+// New: compute a stable fingerprint from an already-built canonical key.
+export function computeFingerprintFromCanonicalKey(
+  canonicalKey: string,
+  length = 10,
+): string {
+  const digest = createHash("sha1").update(canonicalKey).digest("hex");
+  return digest.slice(0, length);
 }
 
 // Main function to extract and group build errors

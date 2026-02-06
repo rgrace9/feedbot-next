@@ -14,6 +14,9 @@ export interface GroupedError {
   percentage: string;
   example_original_text: string;
   example_original_text_2?: string;
+  // Optional fields to surface grouping decisions
+  fingerprint?: string;
+  canonical_key?: string;
 }
 
 export interface AssignmentErrorRecord {
@@ -37,4 +40,6 @@ export interface GroupedAssignmentLLMRow {
   errorMessage: string; // cleaned plain text message
   assignmentContext?: string; // record.part or similar
   count?: number;
+  fingerprint?: string;
+  canonicalKey?: string;
 }
