@@ -5,9 +5,41 @@ import {
 } from "./assignmentGroupErrors";
 
 const inputFile = "./data/assignment_test_failures.csv";
+
+// Read raw data to get total count
+import { parse } from "csv-parse/sync";
+import { readFileSync } from "fs";
+const rawContent = readFileSync(inputFile, "utf-8");
+const rawRecords = parse(rawContent, { columns: true, skip_empty_lines: true });
+const totalErrors = rawRecords.length;
+
 console.log("🧪 Grouping assignment test failures...\n");
 
 const llmRows = buildAssignmentLLMRows(inputFile);
+const uniquePatterns = llmRows.length;
+
+// Calculate reduction
+const reductionPercent = ((1 - uniquePatterns / totalErrors) * 100).toFixed(1);
+
+console.log("📊 GROUPING STATISTICS:");
+console.log(`   Total error records: ${totalErrors.toLocaleString()}`);
+console.log(`   Unique patterns found: ${uniquePatterns.toLocaleString()}`);
+console.log(
+  `   Reduction: ${reductionPercent}% (${(totalErrors - uniquePatterns).toLocaleString()} fewer LLM calls needed)\n`,
+);
+
+// Count test failures specifically
+const testFailureCount = llmRows.filter(
+  (r) => r.errorType === "TEST_FAILURE",
+).length;
+const testFailureTotal = llmRows
+  .filter((r) => r.errorType === "TEST_FAILURE")
+  .reduce((sum, r) => sum + (r.count || 0), 0);
+console.log("🎯 TEST FAILURE GROUPING:");
+console.log(
+  `   ${testFailureTotal.toLocaleString()} test failure errors → ${testFailureCount} unique patterns`,
+);
+console.log(`   Each pattern will get a custom LLM-generated hint\n`);
 
 console.log("\n📊 🧠 Top Assignment Error Patterns by Category and Test:\n");
 
@@ -89,6 +121,33 @@ llmRows
 
 // Write structured CSV for LLM hint generation
 writeAssignmentLLMCSV(llmRows);
+
+// Show category breakdown with test failure improvement
+console.log("\n📈 CATEGORY BREAKDOWN:");
+const categoryStats = new Map<string, { unique: number; total: number }>();
+llmRows.forEach((row) => {
+  const cat = row.errorType;
+  if (!categoryStats.has(cat)) {
+    categoryStats.set(cat, { unique: 0, total: 0 });
+  }
+  const stats = categoryStats.get(cat)!;
+  stats.unique++;
+  stats.total += row.count || 0;
+});
+
+// Sort by total errors
+const sortedCats = Array.from(categoryStats.entries()).sort(
+  (a, b) => b[1].total - a[1].total,
+);
+
+sortedCats.forEach(([cat, stats]) => {
+  const avgPerPattern = (stats.total / stats.unique).toFixed(1);
+  console.log(`   ${cat}:`);
+  console.log(
+    `      ${stats.total.toLocaleString()} errors → ${stats.unique} unique patterns (avg ${avgPerPattern} errors/pattern)`,
+  );
+});
+
 console.log("\n✨ Done!");
 
 // Revised daily update: summarize by category → test name subgroups

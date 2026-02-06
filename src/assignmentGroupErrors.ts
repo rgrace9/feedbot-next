@@ -9,6 +9,100 @@ import {
 import { computeFingerprintFromCanonicalKey } from "./extractBuildErrors";
 import type { AssignmentErrorRecord, GroupedAssignmentLLMRow } from "./types";
 
+// Extract and normalize assertion from a test failure message
+function extractNormalizedAssertion(errorMsg: string): string {
+  // First check for the generic "Your tests failed against instructor's solution"
+  if (
+    errorMsg.includes("Your tests failed against the instructor's solution")
+  ) {
+    // Still extract the actual assertion if present
+    const match = errorMsg.match(
+      /expected:\s*<([^>]+)>\s+but\s+was:\s*<([^>]+)>/i,
+    );
+    if (match) {
+      let expected = match[1].replace(/\s+/g, " ").trim();
+      let actual = match[2].replace(/\s+/g, " ").trim();
+
+      // Normalize decimal formatting (1.0 -> 1, but keep 1.5)
+      expected = expected.replace(/\b(\d+)\.0+\b/g, "$1");
+      actual = actual.replace(/\b(\d+)\.0+\b/g, "$1");
+
+      // Normalize scientific notation and very long numbers
+      expected = expected
+        .replace(/\d+\.\d+E\d+/gi, "LARGE_NUM")
+        .replace(/\d{15,}/g, "LARGE_NUM");
+      actual = actual
+        .replace(/\d+\.\d+E\d+/gi, "LARGE_NUM")
+        .replace(/\d{15,}/g, "LARGE_NUM");
+
+      return `expected:<${expected}> but was:<${actual}>`;
+    }
+    // No specific assertion found, group all "tests failed" together
+    return "tests_failed_against_instructor_solution";
+  }
+
+  // Try to find a line like: expected:<...> but was:<...>
+  const match = errorMsg.match(
+    /expected:\s*<([^>]+)>\s+but\s+was:\s*<([^>]+)>/i,
+  );
+  if (match) {
+    let expected = match[1].replace(/\s+/g, " ").trim();
+    let actual = match[2].replace(/\s+/g, " ").trim();
+
+    // Normalize decimal formatting
+    expected = expected.replace(/\b(\d+)\.0+\b/g, "$1");
+    actual = actual.replace(/\b(\d+)\.0+\b/g, "$1");
+
+    // Normalize scientific notation and very long numbers
+    expected = expected
+      .replace(/\d+\.\d+E\d+/gi, "LARGE_NUM")
+      .replace(/\d{15,}/g, "LARGE_NUM");
+    actual = actual
+      .replace(/\d+\.\d+E\d+/gi, "LARGE_NUM")
+      .replace(/\d{15,}/g, "LARGE_NUM");
+
+    return `expected:<${expected}> but was:<${actual}>`;
+  }
+
+  // Check for specific test method failures (these should be grouped separately)
+  const testMethodMatch = errorMsg.match(
+    /app\.cookyourbooks\.domain\.(\w+Test)\.(\w+)/,
+  );
+  if (testMethodMatch) {
+    return `test_method:${testMethodMatch[1]}.${testMethodMatch[2]}`;
+  }
+
+  // Fallback: try to find AssertionError line
+  const lines = errorMsg.split("\n");
+  const assertLine = lines.find(
+    (l) =>
+      l.includes("AssertionFailedError") &&
+      !l.includes("at app//") &&
+      !l.includes("at java."),
+  );
+  if (assertLine) {
+    return assertLine
+      .replace(/org\.opentest4j\.AssertionFailedError:\s*/i, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 150);
+  }
+
+  // Last resort: use first meaningful line
+  const meaningfulLine = lines.find(
+    (l) =>
+      l.trim() &&
+      !l.includes("at app//") &&
+      !l.includes("at java.") &&
+      !l.includes("Test failed:"),
+  );
+  if (meaningfulLine) {
+    return meaningfulLine.replace(/\s+/g, " ").trim().slice(0, 100);
+  }
+
+  return "unknown_test_failure";
+}
+
 interface ErrorGroup {
   fingerprint: string;
   canonicalKey?: string;
@@ -68,7 +162,14 @@ export function buildAssignmentLLMRows(
     const categoryName = category?.name || "Unknown Error";
     const testName = (record.name || "Unknown Test").trim();
 
-    const canonicalKey = `${categoryId}::${includeTestNameInFingerprint ? testName : ""}::${normalized}`;
+    let canonicalKey: string;
+    if (categoryId === "test_failure") {
+      // Group by normalized assertion, not test name
+      const assertion = extractNormalizedAssertion(core);
+      canonicalKey = `${categoryId}::${assertion}`;
+    } else {
+      canonicalKey = `${categoryId}::${includeTestNameInFingerprint ? testName : ""}::${normalized}`;
+    }
     const fingerprint = computeFingerprintFromCanonicalKey(canonicalKey);
 
     if (!tmpGroups.has(fingerprint)) {
