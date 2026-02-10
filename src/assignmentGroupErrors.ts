@@ -9,6 +9,13 @@ import {
 import { computeFingerprintFromCanonicalKey } from "./extractBuildErrors";
 import type { AssignmentErrorRecord, GroupedAssignmentLLMRow } from "./types";
 
+// Determine if this is a student test failure (student tests against instructor solution)
+function isStudentTestFailure(errorMsg: string): boolean {
+  return errorMsg.includes(
+    "Your tests failed against the instructor's solution, and hence, can not be graded",
+  );
+}
+
 // Extract and normalize assertion from a test failure message
 function extractNormalizedAssertion(errorMsg: string): string {
   // First check for the generic "Your tests failed against instructor's solution"
@@ -156,14 +163,30 @@ export function buildAssignmentLLMRows(
     if (!raw || typeof raw !== "string") continue;
     const core = extractAssignmentCore(raw);
     const normalized = normalizeAssignmentError(core);
-    const category =
+    let category =
       categorizeAssignmentError(core) || categorizeAssignmentError(normalized);
+
+    // Override category for test failures to distinguish student vs instructor
+    if (category?.id === "test_failure") {
+      if (isStudentTestFailure(core)) {
+        category = { id: "student_test_failure", name: "Student Test Failure" };
+      } else {
+        category = {
+          id: "instructor_test_failure",
+          name: "Instructor Test Failure",
+        };
+      }
+    }
+
     const categoryId = category?.id || "unknown";
     const categoryName = category?.name || "Unknown Error";
     const testName = (record.name || "Unknown Test").trim();
 
     let canonicalKey: string;
-    if (categoryId === "test_failure") {
+    if (
+      categoryId === "student_test_failure" ||
+      categoryId === "instructor_test_failure"
+    ) {
       // Group by normalized assertion, not test name
       const assertion = extractNormalizedAssertion(core);
       canonicalKey = `${categoryId}::${assertion}`;
