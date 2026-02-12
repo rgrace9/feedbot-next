@@ -1,0 +1,16 @@
+{
+  "processed": {
+    "afd67499d3": {
+      "hint": "The mutation run found 0/5 faults — your tests didn’t fail when the code was altered, so they aren’t exercising or asserting the important behavior of VagueIngredient. Likely causes: missing edge-case checks, too-weak assertions, or not covering branches (e.g., empty/whitespace names, case/spacing differences, unit/quantity variations, equality checks). Next step: add focused tests that assert both positive and negative outcomes for those cases and vary inputs to cover alternate branches; use the surviving mutations to guide which behaviors you need to specify.",
+      "timestamp": "2026-02-12T05:10:30.845Z"
+    },
+    "4179e622a4": {
+      "hint": "Type: weak tests (mutation testing shows no faults caught).\n\nYour tests didn’t detect any injected faults, which means they’re not asserting behavior strongly enough. Add focused unit tests that call MeasuredIngredient’s public behaviors (construction, getters, operations, comparisons) and assert exact expected results and edge cases (zero/negative/null where relevant). Make sure each test would fail if the implementation changed slightly.",
+      "timestamp": "2026-02-12T05:10:38.611Z"
+    },
+    "99b8df3a9e": {
+      "hint": "The failure shows your Unit enum’s getAbbreviation currently throws UnsupportedOperationException, so tests see no implementation. Check Unit.java and implement getAbbreviation so it returns a non-null abbreviation for each enum constant (e.g., store an abbreviation field via a constructor or compute it, and return it). Run tests to confirm the method no longer throws and returns the expected strings.",
+      "timestamp": "2026-02-12T05:10:46.042Z"
+    }
+  }
+}

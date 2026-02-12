@@ -9,8 +9,7 @@ dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Models and prompt variations to test
-const models = ["gpt-4o", "gpt-4o-mini", "gpt-5-nano", "gpt-5-mini"];
+const models = ["gpt-4o", "gpt-4o-mini", "gpt-5-mini"];
 const promptVariations = ["detailed", "concise", "encouraging"];
 
 // CSV row interface matching evaluation_dataset.csv
@@ -203,11 +202,20 @@ ${row.clean_error_text}`;
         // Process row
         try {
           const prompt = generatePrompt(row, promptVariation);
-          const resp = await client.chat.completions.create({
+
+          // Create API call parameters based on model capabilities
+          const apiParams: any = {
             model,
             messages: [{ role: "user", content: prompt }],
-            temperature: 0.2,
-          });
+          };
+
+          // Only add temperature for models that support it
+          if (!model.startsWith("gpt-5")) {
+            apiParams.temperature = 0.2;
+          }
+          // GPT-5 and O1 models use default temperature (1) only
+
+          const resp = await client.chat.completions.create(apiParams);
 
           const hint = resp?.choices[0]?.message.content || "";
 
