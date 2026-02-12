@@ -41,7 +41,10 @@ interface StateFile {
 
 // File paths
 const CSV_PATH = path.join(__dirname, "../data/evaluation_dataset.csv");
-const STATE_PATH = path.join(__dirname, "../data/feedbot_progress.json");
+const STATE_PATH = path.join(
+  __dirname,
+  "../feedbotOutput/feedbot_progress.json",
+);
 
 // Parse CLI arguments
 function parseArgs(): { limit?: number } {
@@ -49,8 +52,10 @@ function parseArgs(): { limit?: number } {
   const limitIndex = args.indexOf("--limit");
 
   if (limitIndex !== -1 && args[limitIndex + 1]) {
-    const limit = parseInt(args[limitIndex + 1], 10);
-    return { limit: isNaN(limit) ? undefined : limit };
+    const limit = parseInt(args[limitIndex + 1]!, 10);
+    if (!isNaN(limit)) {
+      return { limit };
+    }
   }
 
   return {};
@@ -120,6 +125,11 @@ ${row.clean_error_text}
   for (let i = 0; i < rowsToProcess.length; i++) {
     const row = rowsToProcess[i];
     const index = i + 1;
+
+    // Skip if row is undefined
+    if (!row) {
+      continue;
+    }
 
     // Skip DEPENDENCY_NOT_MET errors
     if (row.error_type === "DEPENDENCY_NOT_MET") {
