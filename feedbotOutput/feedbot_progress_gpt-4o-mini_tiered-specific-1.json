@@ -1,0 +1,16 @@
+{
+  "processed": {
+    "afd67499d3": {
+      "hint": "It looks like your submission for the `Test VagueIngredient` has not passed the mutation testing, as indicated by the message showing 0 out of 5 faults detected. This suggests that your code may not be effectively handling the various scenarios that the tests are designed to check.\n\nTo improve your submission, consider reviewing how your code responds to different inputs, especially edge cases. For example, what happens when the ingredient list is empty or when it contains ambiguous or vague entries? Are there specific conditions where your code might not behave as expected? \n\nAdditionally, think about whether your implementation correctly identifies and processes vague ingredients according to the assignment requirements. Are there any assumptions in your code that could lead to incorrect behavior in these situations?\n\nTake some time to analyze these aspects and see if you can identify any gaps in your logic or handling of specific cases.",
+      "timestamp": "2026-02-12T23:04:30.021Z"
+    },
+    "4179e622a4": {
+      "hint": "It looks like your submission for the `MeasuredIngredient` class did not pass the mutation testing, which means that the tests you wrote did not effectively catch the faults introduced in your code. \n\nTo improve your tests, consider the following: \n\n1. **Review Your Test Cases**: Are your tests covering all possible scenarios for the `MeasuredIngredient` class? Think about edge cases, such as what happens when the ingredient amount is zero or negative, or when the ingredient name is empty or null. \n\n2. **Check for Logical Conditions**: Are there any logical conditions in your class that could lead to unexpected behavior? For example, how does your code handle situations where the measurement unit is not recognized or is invalid?\n\n3. **Test Assertions**: Ensure that your assertions in the tests are checking the expected outcomes correctly. Are you verifying that the state of the `MeasuredIngredient` object is as you expect after certain operations?\n\nBy focusing on these areas, you can enhance your tests to better detect faults and improve your overall implementation.",
+      "timestamp": "2026-02-12T23:04:32.452Z"
+    },
+    "99b8df3a9e": {
+      "hint": "It looks like your submission is missing the implementation for the `Unit` enum, which is why the tests are failing. The error message indicates that the test is running against a fallback implementation instead of your code.\n\nTo move forward, consider the following:\n\n1. **Check Your Implementation**: Have you defined the `Unit` enum in your code? Make sure that you have created the enum and implemented all required methods, including `getAbbreviation()`.\n\n2. **Review Enum Requirements**: What specific units and abbreviations need to be included in your `Unit` enum? Ensure that you have accounted for all necessary values as outlined in the assignment.\n\n3. **Test Your Code**: Once you've implemented the enum, run your tests again. What happens when you call `getAbbreviation()` on a unit that you have not defined? Ensure that your method handles all cases appropriately.\n\nBy addressing these points, you should be able to resolve the issue and pass the tests.",
+      "timestamp": "2026-02-12T23:04:35.597Z"
+    }
+  }
+}

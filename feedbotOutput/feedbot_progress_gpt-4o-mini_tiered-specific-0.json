@@ -1,0 +1,16 @@
+{
+  "processed": {
+    "afd67499d3": {
+      "hint": "It looks like your submission for the \"VagueIngredient\" component did not detect any faults during the mutation testing process, which indicates that your tests may not be adequately covering the functionality of your code. \n\nThis involves how your program handles different scenarios and edge cases related to vague ingredients. You might want to review your test cases to ensure they are comprehensive and effectively challenge the logic of your implementation. Consider whether your tests account for various interpretations or ambiguities that could arise with vague ingredients. \n\nAs a next step, check if you can identify any additional scenarios or variations that your current tests might be missing. This will help improve the robustness of your testing approach.",
+      "timestamp": "2026-02-12T23:04:23.344Z"
+    },
+    "4179e622a4": {
+      "hint": "It looks like your submission for the \"MeasuredIngredient\" component has not passed the mutation testing, as indicated by the detection of faults. This suggests that your implementation may not be adequately handling certain scenarios or edge cases that the tests are designed to evaluate.\n\nTo improve your submission, consider reviewing how your program manages the core functionalities of the \"MeasuredIngredient\" class. Focus on ensuring that your methods are robust and can handle a variety of inputs and states effectively. \n\nNext, you might want to revisit the requirements and specifications for this component to ensure that all expected behaviors are covered in your implementation. Additionally, think about how you can enhance your tests to cover more cases, which may help in identifying any weaknesses in your code.",
+      "timestamp": "2026-02-12T23:04:25.942Z"
+    },
+    "99b8df3a9e": {
+      "hint": "It looks like your submission is missing an implementation for the `Unit` enum, which is causing the tests to fail. The error indicates that the tests are running against a fallback implementation instead of your own code. \n\nTo move forward, check that you have defined the `Unit` enum and implemented all required methods, particularly the `getAbbreviation` method. Make sure your enum includes all necessary units and their abbreviations. Once you have implemented this, you can run the tests again to see if they pass.",
+      "timestamp": "2026-02-12T23:04:27.553Z"
+    }
+  }
+}

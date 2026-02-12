@@ -3,12 +3,13 @@ import { stringify } from "csv-stringify/sync";
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
+import { MODELS } from "../constants/models.js";
+import { PROMPT_VARIATIONS } from "../constants/promptData.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Models and prompt variations (matching your feedbot.ts)
-const models = ["gpt-4o", "gpt-4o-mini", "gpt-5-mini"];
-const promptVariations = ["detailed", "concise", "encouraging"];
+const models = MODELS;
+const promptVariations = PROMPT_VARIATIONS;
 
 // Interfaces
 interface EvaluationRow {

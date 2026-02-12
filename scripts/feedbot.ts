@@ -4,13 +4,22 @@ import { existsSync, readFileSync, writeFileSync } from "fs";
 import OpenAI from "openai";
 import * as path from "path";
 import { fileURLToPath } from "url";
+import { MODELS as models } from "../constants/models.js";
+import {
+  BASE_PROMPT,
+  CHECKLIST_STRATEGY_PROMPT,
+  CONCEPT_ORIENTED_PROMPT,
+  PROMPT_VARIATIONS,
+  REFLECTION_PROMPT,
+  TEST_DESIGN_PROMPT,
+  TIERED_SPECIFIC_0_PROMPT,
+  TIERED_SPECIFIC_1_PROMPT,
+  TIERED_SPECIFIC_2_PROMPT,
+} from "../constants/promptData.js";
 
 dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-const models = ["gpt-4o", "gpt-4o-mini", "gpt-5-mini"];
-const promptVariations = ["detailed", "concise", "encouraging"];
 
 // CSV row interface matching evaluation_dataset.csv
 interface EvaluationRow {
@@ -73,36 +82,45 @@ function saveState(state: StateFile, statePath: string): void {
   writeFileSync(statePath, JSON.stringify(state, null, 2), "utf-8");
 }
 
-// Generate prompt for a row
+// Generate prompt based on error type and variation
+const promptVariations = PROMPT_VARIATIONS;
+
 function generatePrompt(row: EvaluationRow, promptVariation: string): string {
-  let basePrompt = `You are FeedBot, an automated feedback assistant for a programming course. Your goal is to help students understand why their submission failed and how to make progress, without giving them the solution. 
-Follow this process: 
-1. Carefully analyze the error output produced by the grading system. 
-1. Identify the type of problem (e.g., build configuration issue, language version mismatch, test failure, runtime error). 
-1. Infer what misunderstanding or mistake the student likely made. 
-1. Write a short, clear hint that explains the issue at a high level and suggests a next step the student can take. 
-Guidelines: 
-* Do NOT provide code or a complete fix. 
-* Do NOT mention internal tooling, graders, or infrastructure. 
-* Use clear, student-friendly language. 
-* Focus on what to check or review, not what to copy.`;
+  let basePrompt = BASE_PROMPT;
 
   // Add variation-specific modifications
   switch (promptVariation) {
-    case "detailed":
-      basePrompt += `
-* Provide comprehensive analysis with multiple debugging steps.
-* Include background context about why this type of error occurs.`;
+    case "concept-oriented":
+      basePrompt += CONCEPT_ORIENTED_PROMPT;
       break;
-    case "concise":
-      basePrompt += `
-* Keep response under 100 words.
-* Focus only on the most critical issue.`;
+
+    case "test-design":
+      basePrompt += TEST_DESIGN_PROMPT;
+
       break;
-    case "encouraging":
-      basePrompt += `
-* Use supportive, motivational language.
-* Remind the student that debugging is a normal part of learning.`;
+
+    case "checklist-strategy":
+      basePrompt += CHECKLIST_STRATEGY_PROMPT;
+      break;
+
+    case "reflection-prompting":
+      basePrompt += REFLECTION_PROMPT;
+      break;
+
+    case "tiered-specific-0":
+      basePrompt += TIERED_SPECIFIC_0_PROMPT;
+      break;
+
+    case "tiered-specific-1":
+      basePrompt += TIERED_SPECIFIC_1_PROMPT;
+      break;
+
+    case "tiered-specific-2":
+      basePrompt += TIERED_SPECIFIC_2_PROMPT;
+      break;
+
+    default:
+      // Keep base prompt as-is for any unrecognized variations
       break;
   }
 
@@ -116,7 +134,6 @@ ${row.clean_error_text}`;
 
   return basePrompt;
 }
-
 // Main processing function
 (async () => {
   const { limit } = parseArgs();

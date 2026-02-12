@@ -1,0 +1,16 @@
+{
+  "processed": {
+    "afd67499d3": {
+      "hint": "**Reflection Question:** What do you expect your code to do when it encounters an ingredient with vague or ambiguous details?  \n\n**Hint:** Let's think about why this error is happening. The test is designed to check how your code handles \"vague\" ingredients, which likely means ingredients that are incomplete, unclear, or missing key details. If no faults are being detected, it could mean your code isn't properly identifying or handling these cases. Review how your code processes input data—are there any assumptions being made about the format or completeness of the ingredient details?  \n\nConsider adding test cases that simulate vague or ambiguous ingredients (e.g., missing quantities, unclear names, or unexpected formats) to see how your code behaves. This might help you identify areas where your logic could be improved.",
+      "timestamp": "2026-02-12T23:02:26.034Z"
+    },
+    "4179e622a4": {
+      "hint": "**Reflection Question:** \"What assumptions are you making about how your code handles mutations or changes to the `MeasuredIngredient` object?\"\n\n**Hint:** Let's think about why this error is happening. Mutation testing is designed to check whether your tests can detect intentional faults introduced into the code. If no faults are detected, it suggests that your tests might not be thorough enough or aren't covering edge cases where the behavior of `MeasuredIngredient` could change unexpectedly. \n\nReview your test cases for `MeasuredIngredient`. Are they verifying the behavior of the object when its state is modified? For example, consider scenarios where the ingredient's measurement is updated, invalid values are assigned, or unexpected inputs are handled. Think about edge cases and unusual conditions that might break the expected functionality. \n\nTry to expand your tests to cover situations where the object might behave incorrectly due to mutations. This will help ensure your tests are robust enough to catch faults.",
+      "timestamp": "2026-02-12T23:02:42.512Z"
+    },
+    "99b8df3a9e": {
+      "hint": "**Reflection Question:** \"What part of the assignment asks you to implement the `Unit` enum, and what behavior is it supposed to provide?\"\n\n**Let's think about why this error is happening...** The error message indicates that the `Unit` enum has not been implemented yet, and the test is running against a placeholder or fallback version. This suggests that the required methods or functionality (like `getAbbreviation`) in the `Unit` enum are missing or incomplete.\n\nTo make progress, review the assignment instructions related to the `Unit` enum. Pay close attention to what methods or properties the enum is expected to have, such as `getAbbreviation`. Think about how enums work in Java and how you can associate specific behavior (like returning an abbreviation) with each enum value. \n\nBefore writing code, ask yourself: \"What should each unit in the enum represent, and how should it behave when the `getAbbreviation` method is called?\" Then, start by defining the enum and implementing the required methods step by step.",
+      "timestamp": "2026-02-12T23:02:45.725Z"
+    }
+  }
+}
