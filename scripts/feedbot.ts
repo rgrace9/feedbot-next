@@ -76,22 +76,27 @@ function saveState(state: StateFile): void {
 }
 
 // Generate prompt for a row
-function generatePrompt(row: EvaluationRow): string {
-  return `You are Feedbot, a TA for a Java/Gradle assignment.
-Given this grading log, write a student-facing hint.
+function generatePrompt(row: EvaluationRow, promptVariation: string): string {
+  const basePrompt = `You are FeedBot, an automated feedback assistant for a programming course. Your goal is to help students understand why their submission failed and how to make progress, without giving them the solution. 
+Follow this process: 
+1. Carefully analyze the error output produced by the grading system. 
+1. Identify the type of problem (e.g., build configuration issue, language version mismatch, test failure, runtime error). 
+1. Infer what misunderstanding or mistake the student likely made. 
+1. Write a short, clear hint that explains the issue at a high level and suggests a next step the student can take. 
+Guidelines: 
+* Do NOT provide code or a complete fix. 
+* Do NOT mention internal tooling, graders, or infrastructure. 
+* Use clear, student-friendly language. 
+* Focus on what to check or review, not what to copy. 
+This is the assignment the student is working on: https://neu-pdi.github.io/cs3100-public-resources/assignments/cyb1-recipes
 
 Category: ${row.category}
 Test Name: ${row.test_name}
-
-Rules:
-- Focus on the most important error.
-- Explain it in 1–2 sentences.
-- Give 3–5 concrete steps to debug locally.
-- Do NOT give the full solution.
-
 LOG:
 ${row.clean_error_text}
+
 `;
+  return basePrompt;
 }
 
 // Main processing function
