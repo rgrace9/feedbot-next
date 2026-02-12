@@ -1,0 +1,16 @@
+{
+  "processed": {
+    "afd67499d3": {
+      "hint": "It looks like your submission for the \"Test VagueIngredient\" is not passing the mutation testing, as indicated by the message showing zero faults detected. This means that the tests you wrote did not effectively identify the issues introduced by the mutations.\n\nHere are a few things to consider as you move forward:\n\n1. **Review Your Test Cases**: Make sure that your test cases are comprehensive and cover a variety of scenarios. Think about edge cases or unusual inputs that might not be handled correctly by your code.\n\n2. **Understand Mutation Testing**: This type of testing is designed to check if your tests can catch errors. If your tests are not detecting the introduced faults, it may indicate that they are not rigorous enough.\n\n3. **Check Assertions**: Ensure that your assertions in the tests are correctly validating the expected outcomes. If the assertions are too lenient or not checking the right conditions, they may pass even when there are faults.\n\nRemember, debugging and refining your tests is a normal part of the learning process. Take your time to analyze your test cases and consider how they can be improved. Good luck!",
+      "timestamp": "2026-02-12T04:51:00.201Z"
+    },
+    "4179e622a4": {
+      "hint": "It looks like your submission for the \"MeasuredIngredient\" test didn't pass as expected, with zero faults detected out of five. This suggests that there may be issues with how your code is handling the requirements of the assignment.\n\nHere are a few things to consider:\n\n1. **Review the Requirements**: Make sure you thoroughly understand what the \"MeasuredIngredient\" class is supposed to do. Check if you are implementing all the necessary methods and properties as specified in the assignment.\n\n2. **Check Your Logic**: Since the test is designed to detect faults, think about the logic in your code. Are there any edge cases or scenarios that you might not have accounted for? \n\n3. **Test Cases**: Look at the test cases that are being run. If you have access to them, try to understand what inputs are being used and what outputs are expected. This can help you identify where your implementation might be falling short.\n\nRemember, debugging is a normal part of the learning process, and each mistake is an opportunity to improve your understanding. Keep at it, and you'll get there!",
+      "timestamp": "2026-02-12T04:51:02.653Z"
+    },
+    "99b8df3a9e": {
+      "hint": "It looks like your submission is missing the implementation for the `Unit` enum, which is why the tests are failing. The error message indicates that the test is running against a fallback implementation instead of your code.\n\nThis suggests that you may not have completed the required code for the `Unit` enum, or there might be an issue with how it's structured. \n\nTo move forward, I recommend reviewing the assignment instructions and ensuring that you've implemented the `Unit` enum correctly, including all necessary methods and values. Debugging and refining your code is a normal part of the learning process, so don't get discouraged! Keep at it, and you'll get there.",
+      "timestamp": "2026-02-12T04:51:04.618Z"
+    }
+  }
+}

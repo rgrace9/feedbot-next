@@ -1,0 +1,16 @@
+{
+  "processed": {
+    "afd67499d3": {
+      "hint": "It looks like your implementation of the `VagueIngredient` class did not introduce any faults that the tests could detect. This suggests that your code may not be handling edge cases or variations in input as expected. Review the requirements for the `VagueIngredient` class and ensure that your implementation accounts for different scenarios. Consider how your code could be modified to produce different outcomes based on varying inputs.",
+      "timestamp": "2026-02-12T04:50:24.413Z"
+    },
+    "4179e622a4": {
+      "hint": "It looks like your code did not detect any faults during the mutation testing for the `MeasuredIngredient` class. This suggests that your tests might not be thorough enough to catch potential issues or edge cases in the implementation. Review your test cases to ensure they cover a wide range of scenarios, including edge cases, invalid inputs, and boundary conditions. Focus on testing all possible behaviors of the `MeasuredIngredient` class to ensure your tests are robust and comprehensive.",
+      "timestamp": "2026-02-12T04:50:26.249Z"
+    },
+    "99b8df3a9e": {
+      "hint": "It looks like your submission is missing the implementation for the `Unit` enum, which is causing the tests to fail. The grading system is using a fallback implementation instead of your code. Please review the assignment requirements to ensure you have defined the `Unit` enum correctly and implemented all necessary methods. Once you've added your implementation, try running the tests again.",
+      "timestamp": "2026-02-12T04:50:27.526Z"
+    }
+  }
+}

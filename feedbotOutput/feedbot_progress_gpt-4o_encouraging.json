@@ -1,0 +1,16 @@
+{
+  "processed": {
+    "afd67499d3": {
+      "hint": "It looks like your code didn't detect any faults in the \"VagueIngredient\" test, but there are supposed to be five. This suggests that your implementation might not be handling certain edge cases or variations in the ingredient descriptions correctly.\n\nHint: Review how your code processes and identifies vague or ambiguous ingredients. Are you accounting for all possible ways an ingredient might be described vaguely? Double-check the logic or conditions you're using to flag these cases. Try adding some print statements or debugging tools to see how your code behaves with different inputs.\n\nRemember, debugging is a normal and valuable part of programming—you're on the right track by testing and refining your work! Keep going!",
+      "timestamp": "2026-02-12T04:50:30.947Z"
+    },
+    "4179e622a4": {
+      "hint": "It looks like your submission for the \"MeasuredIngredient\" test has not passed as expected, with zero faults detected out of five. This suggests that there may be issues with how your code is handling the requirements of the tests.\n\nHere are a few things to consider:\n\n1. **Understanding the Requirements**: Make sure you thoroughly review the assignment specifications for the \"MeasuredIngredient\" class. Are you implementing all the required methods and properties as outlined?\n\n2. **Test Cases**: Check the specific test cases that are being run. Are there edge cases or specific scenarios that you might not have accounted for in your implementation?\n\n3. **Logic Errors**: It’s possible that there are logical errors in your code that prevent it from functioning as intended. Take a moment to step through your code and verify that each part behaves as you expect.\n\nRemember, debugging is a normal part of the learning process, and each mistake is an opportunity to improve your understanding. Keep at it, and you'll get there!",
+      "timestamp": "2026-02-12T04:50:33.843Z"
+    },
+    "99b8df3a9e": {
+      "hint": "It looks like the test is failing because the `Unit` enum or its required methods (like `getAbbreviation`) have not been implemented yet. The error message indicates that the test is running against a placeholder or fallback implementation, which means your code for this part is missing or incomplete.\n\n### Hint:\nTake a look at the assignment instructions for the `Unit` enum. Make sure you have defined all the required enum constants (e.g., CUP, TABLESPOON, etc.) and implemented any methods the assignment specifies, such as `getAbbreviation`. Pay special attention to the method signatures and behavior described in the instructions. \n\nRemember, it's okay to start small—try implementing just one or two constants and their abbreviations first, then run the tests again to see your progress. Debugging and iterating is a normal and valuable part of the process! Keep going—you’re on the right track!",
+      "timestamp": "2026-02-12T04:50:38.828Z"
+    }
+  }
+}
