@@ -1,16 +1,8 @@
 {
   "processed": {
     "afd67499d3": {
-      "hint": "It looks like your submission for the \"VagueIngredient\" test did not detect any faults, which suggests that your implementation may not be effectively handling the scenarios that the test is designed to evaluate. \n\nThis involves how your program interprets and processes vague or ambiguous ingredient information. You might want to review how your code identifies and responds to different types of vague inputs. Consider whether your logic accounts for various interpretations of ingredient descriptions and how it might be improved to handle these cases more robustly.\n\nAs a next step, revisit the requirements for handling vague ingredients and ensure that your implementation aligns with the expected behaviors outlined in the assignment.",
-      "timestamp": "2026-02-12T23:02:47.448Z"
-    },
-    "4179e622a4": {
-      "hint": "It looks like your submission didn't detect any faults during the mutation testing for the `MeasuredIngredient` component. This suggests that your tests might not be thorough enough to cover all possible scenarios or edge cases for this functionality.\n\n### Hint:\nReview how your tests interact with the `MeasuredIngredient` class. Are your tests checking a variety of inputs, including edge cases and unusual scenarios? Mutation testing is designed to ensure your tests can catch small, intentional changes to the code. Think about how your tests validate the behavior of `MeasuredIngredient`—are they comprehensive enough to catch subtle issues? Focus on expanding your test coverage and ensuring your assertions are specific and meaningful.",
-      "timestamp": "2026-02-12T23:02:50.898Z"
-    },
-    "99b8df3a9e": {
-      "hint": "It looks like the issue is related to the `Unit` enum not being fully implemented. The error indicates that the test is running against a placeholder or fallback implementation because the required functionality hasn't been provided yet.\n\n### Likely misunderstanding:\nYou may not have implemented the `Unit` enum or its methods (such as `getAbbreviation`) yet. This is why the test is failing—it cannot find the expected behavior in your code.\n\n### Hint:\nFocus on implementing the `Unit` enum and any associated methods it requires. Specifically, review the assignment instructions for what the `Unit` enum should represent and how it should behave. Pay attention to methods like `getAbbreviation`—think about what this method is supposed to return for each unit. Once you've implemented the enum and its methods, rerun the tests to check your progress.",
-      "timestamp": "2026-02-12T23:02:54.770Z"
+      "hint": "It looks like your program did not detect any faults during the \"Test VagueIngredient\" test. This suggests that your implementation may not be handling certain edge cases or ambiguous scenarios correctly when dealing with vague or unclear ingredient descriptions.\n\n### Hint:\nReview how your program processes and interprets ingredient descriptions, especially when they are incomplete, ambiguous, or formatted in unexpected ways. Think about how your logic determines whether an ingredient is valid or not and whether it accounts for variations or unusual inputs. Try testing your program with a variety of vague or unclear ingredient examples to see if it behaves as expected.",
+      "timestamp": "2026-02-13T18:18:37.180Z"
     }
   }
 }

@@ -1,57 +1,13 @@
-import { parse } from "csv-parse/sync";
 import * as dotenv from "dotenv";
-import { existsSync, readFileSync, writeFileSync } from "fs";
-import OpenAI from "openai";
 import * as path from "path";
 import { fileURLToPath } from "url";
 import { MODELS as models } from "../constants/models.js";
-import {
-  BASE_PROMPT,
-  CHECKLIST_STRATEGY_PROMPT,
-  CONCEPT_ORIENTED_PROMPT,
-  PROMPT_VARIATIONS,
-  REFLECTION_PROMPT,
-  TEST_DESIGN_PROMPT,
-  TIERED_SPECIFIC_0_PROMPT,
-  TIERED_SPECIFIC_1_PROMPT,
-  TIERED_SPECIFIC_2_PROMPT,
-} from "../constants/promptData.js";
+import { PROMPT_VARIATIONS } from "../constants/promptData.js";
+import { FeedBotProcessor } from "./classes/FeedBotProcessor.js";
 
 dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-// CSV row interface matching evaluation_dataset.csv
-interface EvaluationRow {
-  category: string;
-  test_name: string;
-  error_type: string;
-  count: string;
-  fingerprint: string;
-  canonical_key: string;
-  clean_error_text: string;
-}
-
-// State file structure
-interface StateFile {
-  processed: {
-    [fingerprint: string]: {
-      hint: string;
-      timestamp: string;
-    };
-  };
-}
-
-// File paths
-const CSV_PATH = path.join(__dirname, "../data/evaluation_dataset.csv");
-
-// Generate state file path for a specific model+prompt combination
-function getStatePath(model: string, promptVariation: string): string {
-  return path.join(
-    __dirname,
-    `../feedbotOutput/feedbot_progress_${model}_${promptVariation}.json`,
-  );
-}
 
 // Parse CLI arguments
 function parseArgs(): { limit?: number } {
@@ -68,218 +24,32 @@ function parseArgs(): { limit?: number } {
   return {};
 }
 
-// Load existing state
-function loadState(statePath: string): StateFile {
-  if (existsSync(statePath)) {
-    const content = readFileSync(statePath, "utf-8");
-    return JSON.parse(content);
-  }
-  return { processed: {} };
-}
-
-// Save state
-function saveState(state: StateFile, statePath: string): void {
-  writeFileSync(statePath, JSON.stringify(state, null, 2), "utf-8");
-}
-
-// Generate prompt based on error type and variation
-const promptVariations = PROMPT_VARIATIONS;
-
-function generatePrompt(row: EvaluationRow, promptVariation: string): string {
-  let basePrompt = BASE_PROMPT;
-
-  // Add variation-specific modifications
-  switch (promptVariation) {
-    case "concept-oriented":
-      basePrompt += CONCEPT_ORIENTED_PROMPT;
-      break;
-
-    case "test-design":
-      basePrompt += TEST_DESIGN_PROMPT;
-
-      break;
-
-    case "checklist-strategy":
-      basePrompt += CHECKLIST_STRATEGY_PROMPT;
-      break;
-
-    case "reflection-prompting":
-      basePrompt += REFLECTION_PROMPT;
-      break;
-
-    case "tiered-specific-0":
-      basePrompt += TIERED_SPECIFIC_0_PROMPT;
-      break;
-
-    case "tiered-specific-1":
-      basePrompt += TIERED_SPECIFIC_1_PROMPT;
-      break;
-
-    case "tiered-specific-2":
-      basePrompt += TIERED_SPECIFIC_2_PROMPT;
-      break;
-
-    default:
-      // Keep base prompt as-is for any unrecognized variations
-      break;
-  }
-
-  basePrompt += `
-This is the assignment the student is working on: https://neu-pdi.github.io/cs3100-public-resources/assignments/cyb1-recipes
-
-Category: ${row.category}
-Test Name: ${row.test_name}
-LOG:
-${row.clean_error_text}`;
-
-  return basePrompt;
-}
-// Main processing function
+// Main entry point
 (async () => {
   const { limit } = parseArgs();
 
-  // Load CSV
-  const csvContent = readFileSync(CSV_PATH, "utf-8");
-  const rows: EvaluationRow[] = parse(csvContent, {
-    columns: true,
-    skip_empty_lines: true,
+  // Validate environment variables
+  if (!process.env.AZURE_OPENAI_KEY || !process.env.AZURE_OPENAI_ENDPOINT) {
+    console.error(
+      "Error: AZURE_OPENAI_KEY and AZURE_OPENAI_ENDPOINT environment variables are required",
+    );
+    process.exit(1);
+  }
+
+  // Configure the processor
+  const processor = new FeedBotProcessor({
+    csvPath: path.join(__dirname, "../data/evaluation_dataset.csv"),
+    outputDir: path.join(__dirname, "../feedbotOutput"),
+    models,
+    promptVariations: PROMPT_VARIATIONS,
+    modelConfig: {
+      apiKey: process.env.AZURE_OPENAI_KEY,
+      endpoint: process.env.AZURE_OPENAI_ENDPOINT,
+      apiVersion: "2025-03-01-preview",
+    },
+    limit,
   });
 
-  // Track stats per model+prompt combination
-  const stats: {
-    [key: string]: { processed: number; skipped: number; failed: number };
-  } = {};
-
-  console.log(
-    `Starting feedbot processing: ${models.length} models × ${promptVariations.length} prompt variations`,
-  );
-  console.log(`Total combinations: ${models.length * promptVariations.length}`);
-  if (limit) {
-    console.log(`(Limited to first ${limit} rows per combination)`);
-  }
-  console.log("---\n");
-
-  // Loop through each model
-  for (const model of models) {
-    // Loop through each prompt variation
-    for (const promptVariation of promptVariations) {
-      const combinationKey = `${model}_${promptVariation}`;
-      stats[combinationKey] = { processed: 0, skipped: 0, failed: 0 };
-
-      // Get state path for this combination
-      const statePath = getStatePath(model, promptVariation);
-
-      // Initialize OpenAI client for this model
-      const client = new OpenAI({
-        apiKey: process.env.AZURE_OPENAI_KEY!,
-        baseURL: `${process.env.AZURE_OPENAI_ENDPOINT}/openai/deployments/${model}`,
-        defaultQuery: { "api-version": "2025-03-01-preview" },
-        defaultHeaders: { "api-key": process.env.AZURE_OPENAI_KEY! },
-      });
-
-      // Load state for this combination
-      const state = loadState(statePath);
-
-      // Apply limit if specified
-      const rowsToProcess = limit ? rows.slice(0, limit) : rows;
-      const total = rowsToProcess.length;
-
-      console.log(
-        `\n[${model}] [${promptVariation}] Starting combination: ${total} rows to process`,
-      );
-      console.log("---\n");
-
-      for (let i = 0; i < rowsToProcess.length; i++) {
-        const row = rowsToProcess[i];
-        const index = i + 1;
-
-        // Skip if row is undefined
-        if (!row) {
-          continue;
-        }
-
-        // Skip DEPENDENCY_NOT_MET errors
-        if (row.error_type === "DEPENDENCY_NOT_MET") {
-          console.log(
-            `[${model}] [${promptVariation}] [${index}/${total}] Skipping DEPENDENCY_NOT_MET: ${row.category}`,
-          );
-          stats[combinationKey].skipped++;
-          continue;
-        }
-
-        // Skip if already processed
-        if (state.processed[row.fingerprint]) {
-          console.log(
-            `[${model}] [${promptVariation}] [${index}/${total}] Already processed: ${row.category}`,
-          );
-          stats[combinationKey].skipped++;
-          continue;
-        }
-
-        // Process row
-        try {
-          const prompt = generatePrompt(row, promptVariation);
-
-          // Create API call parameters based on model capabilities
-          const apiParams: any = {
-            model,
-            messages: [{ role: "user", content: prompt }],
-          };
-
-          // Only add temperature for models that support it
-          if (!model.startsWith("gpt-5")) {
-            apiParams.temperature = 0.2;
-          }
-          // GPT-5 and O1 models use default temperature (1) only
-
-          const resp = await client.chat.completions.create(apiParams);
-
-          const hint = resp?.choices[0]?.message.content || "";
-
-          // Save to state immediately
-          state.processed[row.fingerprint] = {
-            hint,
-            timestamp: new Date().toISOString(),
-          };
-          saveState(state, statePath);
-
-          // Print to console
-          console.log(
-            `[${model}] [${promptVariation}] [${index}/${total}] Processing: ${row.category}`,
-          );
-          console.log(`[${model}] [${promptVariation}] Hint: ${hint}`);
-          console.log("---\n");
-
-          stats[combinationKey].processed++;
-        } catch (error) {
-          console.error(
-            `[${model}] [${promptVariation}] [${index}/${total}] ERROR processing ${row.category}`,
-          );
-          console.error(`  Fingerprint: ${row.fingerprint}`);
-          console.error(
-            `  Error:`,
-            error instanceof Error ? error.message : error,
-          );
-          console.log("---\n");
-          stats[combinationKey].failed++;
-        }
-      }
-
-      console.log(
-        `[${model}] [${promptVariation}] Combination complete. State saved to: ${statePath}\n`,
-      );
-    }
-  }
-
-  // Print final summary
-  console.log("\n=== SUMMARY ===");
-  for (const model of models) {
-    for (const promptVariation of promptVariations) {
-      const key = `${model}_${promptVariation}`;
-      const stat = stats[key];
-      console.log(
-        `${model} + ${promptVariation}: ${stat.processed} processed, ${stat.skipped} skipped, ${stat.failed} failed`,
-      );
-    }
-  }
+  // Run the processor
+  await processor.run();
 })();
