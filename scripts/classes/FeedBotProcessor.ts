@@ -28,6 +28,7 @@ export interface FeedBotConfig {
   promptVariations: string[];
   modelConfig: ModelConfig;
   limit?: number;
+  delayMs?: number; // NEW: Add delay between requests
 }
 
 /**
@@ -41,12 +42,55 @@ export class FeedBotProcessor {
 
   constructor(config: FeedBotConfig) {
     this.config = config;
+    // Set default delay to 2 seconds between API calls
+    this.config.delayMs = config.delayMs ?? 2000;
     this.promptGenerator = new PromptGenerator();
     this.modelManager = new ModelManager(
       config.modelConfig,
       this.promptGenerator,
     );
     this.resultsAggregator = new ResultsAggregator();
+  }
+
+  /**
+   * Sleep for specified milliseconds
+   */
+  private async sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Retry logic with exponential backoff for 429 errors
+   */
+  private async retryWithBackoff<T>(
+    operation: () => Promise<T>,
+    maxRetries: number = 3,
+    baseDelayMs: number = 1000,
+  ): Promise<T> {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error: any) {
+        // Check if it's a rate limit error
+        if (error?.status === 429 || error?.message?.includes("429")) {
+          if (attempt === maxRetries) {
+            throw error; // Give up after max retries
+          }
+
+          // Exponential backoff: 1s, 2s, 4s, 8s...
+          const delayMs = baseDelayMs * Math.pow(2, attempt);
+          console.log(
+            `Rate limited! Waiting ${delayMs}ms before retry ${attempt + 1}/${maxRetries}`,
+          );
+          await this.sleep(delayMs);
+          continue;
+        }
+
+        // Not a rate limit error, rethrow immediately
+        throw error;
+      }
+    }
+    throw new Error("Should never reach here");
   }
 
   /**
@@ -113,7 +157,7 @@ export class FeedBotProcessor {
   }
 
   /**
-   * Process a single row
+   * Process a single row with rate limiting and retry logic
    */
   private async processSingleRow(
     row: EvaluationRow,
@@ -155,13 +199,11 @@ export class FeedBotProcessor {
       return;
     }
 
-    // Process the row
+    // Process the row with retry logic
     try {
-      const result = await this.modelManager.processRow(
-        row,
-        model,
-        promptVariation,
-      );
+      const result = await this.retryWithBackoff(async () => {
+        return await this.modelManager.processRow(row, model, promptVariation);
+      });
 
       // Save to state immediately
       state.processed[row.fingerprint] = {
@@ -182,6 +224,13 @@ export class FeedBotProcessor {
       console.log("---\n");
 
       this.resultsAggregator.incrementProcessed(model, promptVariation);
+
+      // IMPORTANT: Add delay between requests to avoid rate limiting
+      if (index < total) {
+        // Don't delay after the last item
+        console.log(`Waiting ${this.config.delayMs}ms before next request...`);
+        await this.sleep(this.config.delayMs!);
+      }
     } catch (error) {
       console.error(
         `[${model}] [${promptVariation}] [${index}/${total}] ERROR processing ${row.category}`,
@@ -218,11 +267,11 @@ export class FeedBotProcessor {
     this.log(
       model,
       promptVariation,
-      `Starting combination: ${total} rows to process`,
+      `Starting combination: ${total} rows to process (${this.config.delayMs}ms delay between requests)`,
     );
     console.log("---\n");
 
-    // Process each row
+    // Process each row with delays
     for (let i = 0; i < rowsToProcess.length; i++) {
       const row = rowsToProcess[i];
       await this.processSingleRow(
@@ -253,6 +302,9 @@ export class FeedBotProcessor {
     console.log(
       `Total combinations: ${this.config.models.length * this.config.promptVariations.length}`,
     );
+    console.log(
+      `Rate limiting: ${this.config.delayMs}ms delay between requests`,
+    );
     if (this.config.limit) {
       console.log(
         `(Limited to first ${this.config.limit} rows per combination)`,
@@ -267,6 +319,10 @@ export class FeedBotProcessor {
     for (const model of this.config.models) {
       for (const promptVariation of this.config.promptVariations) {
         await this.processCombination(rows, model, promptVariation);
+
+        // Add delay between combinations to be extra safe
+        console.log(`Waiting 5 seconds before next combination...`);
+        await this.sleep(5000);
       }
     }
 

@@ -9,7 +9,8 @@
     "group:assignment": "tsx src/assignmentMain.ts",
     "feedbot:limit": "tsx scripts/feedbot.ts --limit 5",
     "feedbot:all": "tsx scripts/feedbot.ts",
-    "results": "tsx scripts/aggregate-results.ts"
+    "results": "tsx scripts/aggregate-results.ts",
+    "models": "tsx scripts/list-azure-models.ts"
   },
   "keywords": [],
   "author": "Rebecca Earle",

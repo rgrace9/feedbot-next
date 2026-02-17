@@ -27,8 +27,8 @@ function extractNormalizedAssertion(errorMsg: string): string {
       /expected:\s*<([^>]+)>\s+but\s+was:\s*<([^>]+)>/i,
     );
     if (match) {
-      let expected = match[1].replace(/\s+/g, " ").trim();
-      let actual = match[2].replace(/\s+/g, " ").trim();
+      let expected = match[1]?.replace(/\s+/g, " ").trim();
+      let actual = match[2]?.replace(/\s+/g, " ").trim();
 
       // Normalize decimal formatting (1.0 -> 1, but keep 1.5)
       expected = expected.replace(/\b(\d+)\.0+\b/g, "$1");
@@ -54,11 +54,11 @@ function extractNormalizedAssertion(errorMsg: string): string {
   );
   if (match) {
     let expected = match[1].replace(/\s+/g, " ").trim();
-    let actual = match[2].replace(/\s+/g, " ").trim();
+    let actual = match[2]?.replace(/\s+/g, " ").trim();
 
     // Normalize decimal formatting
     expected = expected.replace(/\b(\d+)\.0+\b/g, "$1");
-    actual = actual.replace(/\b(\d+)\.0+\b/g, "$1");
+    actual = actual?.replace(/\b(\d+)\.0+\b/g, "$1");
 
     // Normalize scientific notation and very long numbers
     expected = expected
@@ -119,6 +119,7 @@ interface ErrorGroup {
   occurrences: number;
   submissionIds: Set<string>;
   examples: string[];
+  originalExamples: string[]; // Store original unprocessed error text
   testNameCounts: Map<string, number>;
   assignmentContextCounts: Map<string, number>;
 }
@@ -205,13 +206,17 @@ export function buildAssignmentLLMRows(
         occurrences: 0,
         submissionIds: new Set<string>(),
         examples: [],
+        originalExamples: [], // Store original unprocessed error text
         testNameCounts: new Map<string, number>(),
         assignmentContextCounts: new Map<string, number>(),
       });
     }
     const grp = tmpGroups.get(fingerprint)!;
     grp.occurrences++;
-    if (grp.examples.length < 1) grp.examples.push(core);
+    if (grp.examples.length < 1) {
+      grp.examples.push(core);
+      grp.originalExamples.push(raw); // Store original raw error text
+    }
     const part = (record.part || "").trim();
     if (part)
       grp.assignmentContextCounts.set(
@@ -225,6 +230,44 @@ export function buildAssignmentLLMRows(
       );
   }
 
+  // Create better error text that preserves important context
+  function buildBetterCleanErrorText(
+    originalText: string,
+    processedText: string,
+    categoryId: string,
+  ): string {
+    // For mutation testing, preserve more context from the original
+    if (categoryId.includes("mutation")) {
+      // Use original text but clean it up minimally
+      return originalText
+        .replace(/\n+/g, "\n") // Normalize line breaks
+        .replace(/\s+/g, " ") // Normalize spaces
+        .trim();
+    }
+
+    // For other error types, check if processed text is too short
+    if (
+      processedText.length < 100 &&
+      originalText.length > processedText.length * 2
+    ) {
+      // If processed text is much shorter than original, use original with light cleaning
+      return originalText
+        .replace(/\n+/g, "\n") // Normalize line breaks
+        .replace(/\s+/g, " ") // Normalize spaces
+        .trim();
+    }
+
+    // Use the buildCleanErrorText result for other cases
+    const cleanText = buildCleanErrorText(processedText, "", categoryId);
+
+    // If result is still too short compared to original, use original
+    if (cleanText.length < 50 && originalText.length > 100) {
+      return originalText.replace(/\n+/g, "\n").replace(/\s+/g, " ").trim();
+    }
+
+    return cleanText;
+  }
+
   const rows: GroupedAssignmentLLMRow[] = [];
   for (const grp of tmpGroups.values()) {
     const testName = getModeValue(grp.testNameCounts) || "";
@@ -233,11 +276,15 @@ export function buildAssignmentLLMRows(
     const errorCategoryName = testName
       ? `${testName} - ${grp.categoryName}`
       : grp.categoryName;
-    const cleanText = buildCleanErrorText(
-      grp.examples[0] || grp.normalizedMessage,
-      testName,
+    const originalText =
+      grp.originalExamples[0] || grp.examples[0] || grp.normalizedMessage;
+    const processedText = grp.examples[0] || grp.normalizedMessage;
+    const cleanText = buildBetterCleanErrorText(
+      originalText,
+      processedText,
       grp.categoryId,
     );
+
     rows.push({
       errorCategory: errorCategoryName,
       testName: testName || "",
