@@ -173,12 +173,13 @@ export class FeedBotProcessor {
       return;
     }
 
-    // Skip DEPENDENCY_NOT_MET errors
-    if (this.promptGenerator.shouldSkipRow(row)) {
+    // Skip rows that should not be sent to the LLM
+    const skipReason = this.promptGenerator.getSkipReason(row);
+    if (skipReason) {
       this.log(
         model,
         promptVariation,
-        `Skipping DEPENDENCY_NOT_MET: ${row.category}`,
+        `Skipping row (${skipReason}): ${row.category}`,
         index,
         total,
       );
