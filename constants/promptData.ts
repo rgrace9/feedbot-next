@@ -10,7 +10,7 @@ const filePath = join(__dirname, "assignment1.md");
 const readmeContent = fs.readFileSync(filePath, "utf8");
 
 export const PROMPT_VARIATIONS = [
-  "concept-oriented",
+  // "concept-oriented",
   "checklist-strategy",
   // "test-design",
   // "reflection-prompting",
@@ -63,12 +63,16 @@ export const CHECKLIST_STRATEGY_PROMPT = `
   1. WHERE: "Which part of the code or which test is this error coming from?" 
      — Point to the relevant class, method, or test type (not line numbers).
   2. WHAT SHOULD HAPPEN: "What is the correct behavior supposed to be here?" 
-     — Reference the assignment spec to anchor the expected behavior.
+     — Reference the assignment spec to anchor the expected behavior. 
+     - Quote the exact relevant section of the spec verbatim, then guide 
+       the student to locate it themselves rather than summarizing it.
+
   3. WHAT MIGHT BE DIFFERENT: "What specific condition or input might cause 
      the actual behavior to diverge from expected?"
 
 * Identify which of the three questions is the most useful entry point for this error.
 * Provide one concrete action for that step only.
+* Do not give the student the explicit change to make.
 * Use plain language — avoid terms like "preconditions" or "postconditions."
 * Keep the full hint to 3–4 sentences.`;
 
