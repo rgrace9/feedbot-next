@@ -12,6 +12,10 @@
     "feedbot:all": "tsx scripts/feedbot.ts",
     "results": "tsx scripts/aggregate-results.ts",
     "results:openrouter": "tsx scripts/aggregate-openrouter-results.ts",
+    "ledger:view": "tsx scripts/manage-cost-ledger.ts view",
+    "ledger:csv": "tsx scripts/manage-cost-ledger.ts csv",
+    "ledger:reset": "tsx scripts/manage-cost-ledger.ts reset",
+    "ledger:json": "tsx scripts/manage-cost-ledger.ts json",
     "models": "tsx scripts/list-azure-models.ts",
     "test:openrouter": "tsx scripts/test-openrouter.ts"
   },
