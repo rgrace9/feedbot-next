@@ -7,16 +7,19 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "tsx src/main.ts",
     "group:assignment": "tsx src/assignmentMain.ts",
+    "feedbot-one": "tsx scripts/feedbot.ts --limit 1",
     "feedbot:limit": "tsx scripts/feedbot.ts --limit 5",
     "feedbot:all": "tsx scripts/feedbot.ts",
     "results": "tsx scripts/aggregate-results.ts",
-    "models": "tsx scripts/list-azure-models.ts"
+    "models": "tsx scripts/list-azure-models.ts",
+    "test:openrouter": "tsx scripts/test-openrouter.ts"
   },
   "keywords": [],
   "author": "Rebecca Earle",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@openrouter/sdk": "^0.8.0",
     "csv-parse": "^6.1.0",
     "csv-stringify": "^6.6.0",
     "dotenv": "^17.2.4",
