@@ -1,7 +1,11 @@
 import { parse } from "csv-parse/sync";
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import * as path from "path";
-import { ModelManager, type ModelConfig } from "./ModelManager.js";
+import {
+  ModelManager,
+  type ModelConfig,
+  type UsageMetadata,
+} from "./ModelManager.js";
 import type { EvaluationRow } from "./PromptGenerator.js";
 import { PromptGenerator } from "./PromptGenerator.js";
 import { ResultsAggregator } from "./ResultsAggregator.js";
@@ -14,6 +18,7 @@ interface StateFile {
     [fingerprint: string]: {
       hint: string;
       timestamp: string;
+      usage?: UsageMetadata;
     };
   };
 }
@@ -107,10 +112,17 @@ export class FeedBotProcessor {
   /**
    * Generate state file path for a specific model+prompt combination
    */
+  private encodeStateSegment(value: string): string {
+    return encodeURIComponent(value);
+  }
+
   private getStatePath(model: string, promptVariation: string): string {
+    const encodedModel = this.encodeStateSegment(model);
+    const encodedPrompt = this.encodeStateSegment(promptVariation);
+
     return path.join(
       this.config.outputDir,
-      `feedbot_progress_${model}_${promptVariation}.json`,
+      `feedbot_progress_m-${encodedModel}_p-${encodedPrompt}.json`,
     );
   }
 
@@ -207,10 +219,14 @@ export class FeedBotProcessor {
       });
 
       // Save to state immediately
-      state.processed[row.fingerprint] = {
+      const stateEntry: any = {
         hint: result.hint,
         timestamp: result.timestamp,
       };
+      if (result.usage) {
+        stateEntry.usage = result.usage;
+      }
+      state.processed[row.fingerprint] = stateEntry;
       this.saveState(state, statePath);
 
       // Log success
@@ -222,6 +238,22 @@ export class FeedBotProcessor {
         total,
       );
       this.log(model, promptVariation, `Hint: ${result.hint}`);
+
+      // Log usage metrics if available
+      if (result.usage) {
+        const usageStr = [
+          result.usage.promptTokens && `prompt: ${result.usage.promptTokens}`,
+          result.usage.completionTokens &&
+            `completion: ${result.usage.completionTokens}`,
+          result.usage.totalTokens && `total: ${result.usage.totalTokens}`,
+          result.usage.costUSD && `cost: $${result.usage.costUSD.toFixed(6)}`,
+        ]
+          .filter(Boolean)
+          .join(" | ");
+        if (usageStr) {
+          this.log(model, promptVariation, `Tokens: ${usageStr}`);
+        }
+      }
       console.log("---\n");
 
       this.resultsAggregator.incrementProcessed(model, promptVariation);
@@ -275,6 +307,7 @@ export class FeedBotProcessor {
     // Process each row with delays
     for (let i = 0; i < rowsToProcess.length; i++) {
       const row = rowsToProcess[i];
+      if (!row) continue;
       await this.processSingleRow(
         row,
         model,

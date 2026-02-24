@@ -1,7 +1,7 @@
 import * as dotenv from "dotenv";
 import * as path from "path";
 import { fileURLToPath } from "url";
-import { MODELS as models } from "../constants/models.js";
+import { MODELS_BY_PROVIDER, type LlmProvider } from "../constants/models.js";
 import { PROMPT_VARIATIONS } from "../constants/promptData.js";
 import { FeedBotProcessor } from "./classes/FeedBotProcessor.js";
 
@@ -24,17 +24,53 @@ function parseArgs(): { limit?: number } {
   return {};
 }
 
+function resolveProvider(): LlmProvider {
+  const provider = (process.env.LLM_PROVIDER ?? "azure").toLowerCase();
+  if (provider === "azure" || provider === "openrouter") {
+    return provider;
+  }
+
+  console.error(
+    `Error: Invalid LLM_PROVIDER \"${provider}\". Use \"azure\" or \"openrouter\".`,
+  );
+  process.exit(1);
+}
+
 // Main entry point
 (async () => {
   const { limit } = parseArgs();
+  const provider = resolveProvider();
 
   // Validate environment variables
-  if (!process.env.AZURE_OPENAI_KEY || !process.env.AZURE_OPENAI_ENDPOINT) {
-    console.error(
-      "Error: AZURE_OPENAI_KEY and AZURE_OPENAI_ENDPOINT environment variables are required",
-    );
-    process.exit(1);
+  if (provider === "azure") {
+    if (!process.env.AZURE_OPENAI_KEY || !process.env.AZURE_OPENAI_ENDPOINT) {
+      console.error(
+        "Error: AZURE_OPENAI_KEY and AZURE_OPENAI_ENDPOINT environment variables are required",
+      );
+      process.exit(1);
+    }
+  } else {
+    if (!process.env.OPEN_ROUTER_KEY) {
+      console.error(
+        "Error: OPEN_ROUTER_KEY environment variable is required for OpenRouter",
+      );
+      process.exit(1);
+    }
   }
+
+  const models = MODELS_BY_PROVIDER[provider];
+  const modelConfig =
+    provider === "azure"
+      ? {
+          provider,
+          apiKey: process.env.AZURE_OPENAI_KEY!,
+          endpoint: process.env.AZURE_OPENAI_ENDPOINT!,
+          apiVersion: "2025-03-01-preview",
+        }
+      : {
+          provider,
+          apiKey: process.env.OPEN_ROUTER_KEY!,
+        };
 
   // Configure the processor
   const processor = new FeedBotProcessor({
@@ -42,12 +78,8 @@ function parseArgs(): { limit?: number } {
     outputDir: path.join(__dirname, "../feedbotOutput"),
     models,
     promptVariations: PROMPT_VARIATIONS,
-    modelConfig: {
-      apiKey: process.env.AZURE_OPENAI_KEY,
-      endpoint: process.env.AZURE_OPENAI_ENDPOINT,
-      apiVersion: "2025-03-01-preview",
-    },
-    limit,
+    modelConfig,
+    ...(limit !== undefined ? { limit } : {}),
   });
 
   // Run the processor
