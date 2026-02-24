@@ -11,6 +11,7 @@
     "feedbot:limit": "tsx scripts/feedbot.ts --limit 5",
     "feedbot:all": "tsx scripts/feedbot.ts",
     "results": "tsx scripts/aggregate-results.ts",
+    "results:openrouter": "tsx scripts/aggregate-openrouter-results.ts",
     "models": "tsx scripts/list-azure-models.ts",
     "test:openrouter": "tsx scripts/test-openrouter.ts"
   },
