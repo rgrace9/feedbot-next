@@ -177,7 +177,9 @@ function buildMarkdown(rows: OpenRouterResultRow[]): string {
 
   lines.push("");
   lines.push("## Requests");
-  lines.push("| Model | Fingerprint | Timestamp | Total Tokens | Cost (USD) | Hint |");
+  lines.push(
+    "| Model | Fingerprint | Timestamp | Total Tokens | Cost (USD) | Hint |",
+  );
   lines.push("|---|---|---|---:|---:|---|");
 
   for (const row of rows) {
