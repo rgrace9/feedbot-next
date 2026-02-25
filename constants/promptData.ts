@@ -12,6 +12,7 @@ const readmeContent = fs.readFileSync(filePath, "utf8");
 export const PROMPT_VARIATIONS = [
   // "concept-oriented",
   "checklist-strategy",
+  "chain-of-thought",
   // "test-design",
   // "reflection-prompting",
   // "tiered-specific-0",
@@ -57,24 +58,53 @@ export const CONCEPT_ORIENTED_PROMPT = `
 * Keep the full hint to 3–4 sentences. Prefer clear and simple over complete.`;
 
 export const CHECKLIST_STRATEGY_PROMPT = `
-* DEBUGGING FOCUS: Walk the student through these three questions in order, 
-  but only expand on the one most relevant to this specific error:
+* DEBUGGING FOCUS: Consider these three questions, then expand only on the one 
+  most useful for this specific error:
 
-  1. WHERE: "Which part of the code or which test is this error coming from?" 
-     — Point to the relevant class, method, or test type (not line numbers).
-  2. WHAT SHOULD HAPPEN: "What is the correct behavior supposed to be here?" 
-     — Reference the assignment spec to anchor the expected behavior. 
-     - Quote the exact relevant section of the spec verbatim, then guide 
-       the student to locate it themselves rather than summarizing it.
+  1. WHERE: Which class, method, or test type is this error coming from?
+     — Do not reference line numbers.
+  2. WHAT SHOULD HAPPEN: What is the correct behavior per the spec?
+     — Quote the exact relevant section verbatim.
+     — If the quote would directly reveal the fix, quote only the surrounding 
+       context and guide the student to find the specific value themselves.
+  3. WHAT MIGHT BE DIFFERENT: What specific condition or input might cause 
+     the actual behavior to diverge from expected?
 
-  3. WHAT MIGHT BE DIFFERENT: "What specific condition or input might cause 
-     the actual behavior to diverge from expected?"
-
-* Identify which of the three questions is the most useful entry point for this error.
-* Provide one concrete action for that step only.
-* Do not give the student the explicit change to make.
-* Use plain language — avoid terms like "preconditions" or "postconditions."
+* Address only the single most useful question — do not combine multiple.
+* End with exactly one concrete action the student can take right now.
 * Keep the full hint to 3–4 sentences.`;
+
+export const CHAIN_OF_THOUGHT_PROMPT = `
+Before writing the student-facing hint, reason through the problem fully.
+You MUST output exactly "======" on its own line before the hint — this is required for the system to function.
+Do not skip the delimiter under any circumstances.
+Only the content after "======" will be shown to the student.
+* ${CHECKLIST_STRATEGY_PROMPT} `;
+// export const CHAIN_OF_THOUGHT_PROMPT =
+// Before writing the student-facing hint, reason through the problem fully.
+// Then output exactly "======" on its own line, followed by the hint.
+// Only the content after "======" will be shown to the student.
+// * ${CHECKLIST_STRATEGY_PROMPT}
+// `;
+// export const CHECKLIST_STRATEGY_PROMPT = `
+// * DEBUGGING FOCUS: Walk the student through these three questions in order,
+//   but only expand on the one most relevant to this specific error:
+
+//   1. WHERE: "Which part of the code or which test is this error coming from?"
+//      — Point to the relevant class, method, or test type (not line numbers).
+//   2. WHAT SHOULD HAPPEN: "What is the correct behavior supposed to be here?"
+//      — Reference the assignment spec to anchor the expected behavior.
+//      - Quote the exact relevant section of the spec verbatim, then guide
+//        the student to locate it themselves rather than summarizing it.
+
+//   3. WHAT MIGHT BE DIFFERENT: "What specific condition or input might cause
+//      the actual behavior to diverge from expected?"
+
+// * Identify which of the three questions is the most useful entry point for this error.
+// * Provide one concrete action for that step only.
+// * Do not give the student the explicit change to make.
+// * Use plain language — avoid terms like "preconditions" or "postconditions."
+// * Keep the full hint to 3–4 sentences.`;
 
 export const TEST_DESIGN_PROMPT = `
     * TEST DESIGN FOCUS: Help the student think like a test designer.

@@ -1,5 +1,6 @@
 import {
   BASE_PROMPT,
+  CHAIN_OF_THOUGHT_PROMPT,
   CHECKLIST_STRATEGY_PROMPT,
   CONCEPT_ORIENTED_PROMPT,
   REFLECTION_PROMPT,
@@ -83,6 +84,9 @@ export class PromptGenerator {
 
       case "checklist-strategy":
         return CHECKLIST_STRATEGY_PROMPT;
+
+      case "chain-of-thought":
+        return CHAIN_OF_THOUGHT_PROMPT;
 
       case "reflection-prompting":
         return REFLECTION_PROMPT;
