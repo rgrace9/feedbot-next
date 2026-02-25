@@ -40,6 +40,7 @@ type StateFile = {
 
 type OpenRouterResultRow = {
   model: string;
+  prompt: string;
   fingerprint: string;
   category: string;
   test_name: string;
@@ -178,13 +179,13 @@ function buildMarkdown(rows: OpenRouterResultRow[]): string {
   lines.push("");
   lines.push("## Requests");
   lines.push(
-    "| Model | Fingerprint | Timestamp | Total Tokens | Cost (USD) | Hint |",
+    "| Model | Prompt | Fingerprint | Timestamp | Total Tokens | Cost (USD) | Hint |",
   );
-  lines.push("|---|---|---|---:|---:|---|");
+  lines.push("|---|---|---|---|---:|---:|---|");
 
   for (const row of rows) {
     lines.push(
-      `| ${escapeInlineMarkdown(row.model)} | ${escapeInlineMarkdown(row.fingerprint)} | ${escapeInlineMarkdown(row.timestamp)} | ${row.total_tokens || ""} | ${row.cost_usd || ""} | ${escapeInlineMarkdown(row.hint)} |`,
+      `| ${escapeInlineMarkdown(row.model)} | ${escapeInlineMarkdown(row.prompt)} | ${escapeInlineMarkdown(row.fingerprint)} | ${escapeInlineMarkdown(row.timestamp)} | ${row.total_tokens || ""} | ${row.cost_usd || ""} | ${escapeInlineMarkdown(row.hint)} |`,
     );
   }
 
@@ -231,6 +232,7 @@ function buildMarkdown(rows: OpenRouterResultRow[]): string {
 
       aggregatedRows.push({
         model: progressFile.model,
+        prompt: progressFile.prompt,
         fingerprint,
         category: metadata?.category ?? "",
         test_name: metadata?.test_name ?? "",
@@ -256,6 +258,7 @@ function buildMarkdown(rows: OpenRouterResultRow[]): string {
 
   const csvHeaders: Array<keyof OpenRouterResultRow> = [
     "model",
+    "prompt",
     "fingerprint",
     "category",
     "test_name",

@@ -1,4 +1,5 @@
 import { OpenRouter } from "@openrouter/sdk";
+import { OpenRouterCostLedger } from "../OpenRouterCostLedger.js";
 import type {
   ChatMessage,
   LlmProviderClient,
@@ -12,10 +13,12 @@ export interface OpenRouterClientConfig {
 export class OpenRouterModelClient implements LlmProviderClient {
   private client: OpenRouter;
   private apiKey: string;
+  private costLedger: OpenRouterCostLedger;
 
   constructor(config: OpenRouterClientConfig) {
     this.apiKey = config.apiKey;
     this.client = new OpenRouter({ apiKey: config.apiKey });
+    this.costLedger = new OpenRouterCostLedger();
   }
 
   private async sleep(ms: number): Promise<void> {
@@ -114,6 +117,23 @@ export class OpenRouterModelClient implements LlmProviderClient {
       if (fetchedCost !== undefined) {
         result.usage.costUSD = fetchedCost;
       }
+    }
+
+    // Log to persistent cost ledger if usage is available
+    if (
+      result.usage &&
+      result.usage.promptTokens !== undefined &&
+      result.usage.completionTokens !== undefined &&
+      result.usage.totalTokens !== undefined &&
+      result.usage.costUSD !== undefined
+    ) {
+      this.costLedger.logRequest(
+        model,
+        result.usage.promptTokens,
+        result.usage.completionTokens,
+        result.usage.totalTokens,
+        result.usage.costUSD,
+      );
     }
 
     return result;
