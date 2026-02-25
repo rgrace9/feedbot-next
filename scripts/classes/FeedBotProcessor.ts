@@ -33,7 +33,8 @@ export interface FeedBotConfig {
   promptVariations: string[];
   modelConfig: ModelConfig;
   limit?: number;
-  delayMs?: number; // NEW: Add delay between requests
+  delayMs?: number; // Delay between individual requests
+  delayBetweenCombinationsMs?: number; // Delay between model+prompt combinations
 }
 
 /**
@@ -47,8 +48,11 @@ export class FeedBotProcessor {
 
   constructor(config: FeedBotConfig) {
     this.config = config;
-    // Set default delay to 2 seconds between API calls
-    this.config.delayMs = config.delayMs ?? 2000;
+    // Delays are now set by the caller based on provider
+    // Defaults: delayMs defaults to 0, delayBetweenCombinationsMs defaults to 0
+    this.config.delayMs = config.delayMs ?? 0;
+    this.config.delayBetweenCombinationsMs =
+      config.delayBetweenCombinationsMs ?? 0;
     this.promptGenerator = new PromptGenerator();
     this.modelManager = new ModelManager(
       config.modelConfig,
@@ -258,8 +262,8 @@ export class FeedBotProcessor {
 
       this.resultsAggregator.incrementProcessed(model, promptVariation);
 
-      // IMPORTANT: Add delay between requests to avoid rate limiting
-      if (index < total) {
+      // Add delay between requests if configured
+      if (this.config.delayMs! > 0 && index < total) {
         // Don't delay after the last item
         console.log(`Waiting ${this.config.delayMs}ms before next request...`);
         await this.sleep(this.config.delayMs!);
@@ -300,8 +304,11 @@ export class FeedBotProcessor {
     this.log(
       model,
       promptVariation,
-      `Starting combination: ${total} rows to process (${this.config.delayMs}ms delay between requests)`,
+      `Starting combination: ${total} row${total === 1 ? "" : "s"} to process`,
     );
+    if (this.config.delayMs! > 0) {
+      console.log(`  (${this.config.delayMs}ms delay between requests)`);
+    }
     console.log("---\n");
 
     // Process each row with delays
@@ -337,7 +344,7 @@ export class FeedBotProcessor {
       `Total combinations: ${this.config.models.length * this.config.promptVariations.length}`,
     );
     console.log(
-      `Rate limiting: ${this.config.delayMs}ms delay between requests`,
+      `Rate limiting: ${this.config.delayMs}ms delay between requests, ${this.config.delayBetweenCombinationsMs}ms between combinations`,
     );
     if (this.config.limit) {
       console.log(
@@ -354,9 +361,13 @@ export class FeedBotProcessor {
       for (const promptVariation of this.config.promptVariations) {
         await this.processCombination(rows, model, promptVariation);
 
-        // Add delay between combinations to be extra safe
-        console.log(`Waiting 5 seconds before next combination...`);
-        await this.sleep(5000);
+        // Add delay between combinations if configured
+        if (this.config.delayBetweenCombinationsMs! > 0) {
+          console.log(
+            `Waiting ${this.config.delayBetweenCombinationsMs}ms before next combination...`,
+          );
+          await this.sleep(this.config.delayBetweenCombinationsMs!);
+        }
       }
     }
 

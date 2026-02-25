@@ -3,6 +3,7 @@ export interface UsageMetadata {
   completionTokens?: number;
   totalTokens?: number;
   costUSD?: number;
+  responseId?: string; // OpenRouter generation ID for batch cost lookup
 }
 
 export interface ProviderResult {

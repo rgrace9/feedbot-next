@@ -8,17 +8,23 @@ import type {
 
 export interface OpenRouterClientConfig {
   apiKey: string;
+  fetchCosts?: boolean; // Whether to fetch costs immediately (defaults to env var or false)
 }
 
 export class OpenRouterModelClient implements LlmProviderClient {
   private client: OpenRouter;
   private apiKey: string;
   private costLedger: OpenRouterCostLedger;
+  private fetchCosts: boolean;
 
   constructor(config: OpenRouterClientConfig) {
     this.apiKey = config.apiKey;
     this.client = new OpenRouter({ apiKey: config.apiKey });
     this.costLedger = new OpenRouterCostLedger();
+    // Default to false unless explicitly set or env var is true
+    this.fetchCosts =
+      config.fetchCosts ??
+      process.env.FETCH_OPENROUTER_COSTS?.toLowerCase() === "true";
   }
 
   private async sleep(ms: number): Promise<void> {
@@ -106,12 +112,24 @@ export class OpenRouterModelClient implements LlmProviderClient {
       };
     }
 
+    // Always capture response ID for batch cost lookup later
+    if (response.id) {
+      result.usage = result.usage ?? {};
+      result.usage.responseId = response.id;
+    }
+
     const responseCost = (response as { cost?: unknown }).cost;
     if (result.usage && typeof responseCost === "number") {
       result.usage.costUSD = responseCost;
     }
 
-    if (result.usage && result.usage.costUSD === undefined && response.id) {
+    // Only fetch cost immediately if fetchCosts is enabled
+    if (
+      this.fetchCosts &&
+      result.usage &&
+      result.usage.costUSD === undefined &&
+      response.id
+    ) {
       await this.sleep(30000);
       const fetchedCost = await this.fetchGenerationCostWithRetry(response.id);
       if (fetchedCost !== undefined) {
@@ -119,7 +137,7 @@ export class OpenRouterModelClient implements LlmProviderClient {
       }
     }
 
-    // Log to persistent cost ledger if usage is available
+    // Log to persistent cost ledger if usage and cost are available
     if (
       result.usage &&
       result.usage.promptTokens !== undefined &&

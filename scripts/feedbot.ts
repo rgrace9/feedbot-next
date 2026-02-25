@@ -10,18 +10,19 @@ dotenv.config();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Parse CLI arguments
-function parseArgs(): { limit?: number } {
+function parseArgs(): { limit?: number; trackCosts: boolean } {
   const args = process.argv.slice(2);
   const limitIndex = args.indexOf("--limit");
+  const trackCosts = args.includes("--track-costs");
 
   if (limitIndex !== -1 && args[limitIndex + 1]) {
     const limit = parseInt(args[limitIndex + 1]!, 10);
     if (!isNaN(limit)) {
-      return { limit };
+      return { limit, trackCosts };
     }
   }
 
-  return {};
+  return { trackCosts };
 }
 
 function resolveProvider(): LlmProvider {
@@ -38,7 +39,7 @@ function resolveProvider(): LlmProvider {
 
 // Main entry point
 (async () => {
-  const { limit } = parseArgs();
+  const { limit, trackCosts } = parseArgs();
   const provider = resolveProvider();
 
   // Validate environment variables
@@ -70,7 +71,16 @@ function resolveProvider(): LlmProvider {
       : {
           provider,
           apiKey: process.env.OPEN_ROUTER_KEY!,
+          fetchCosts: trackCosts,
         };
+
+  // Set delays based on provider
+  // OpenRouter: no delays needed (generous rate limits)
+  // Azure: 2s between requests, 5s between combinations (strict rate limits)
+  const delays =
+    provider === "openrouter"
+      ? { delayMs: 0, delayBetweenCombinationsMs: 0 }
+      : { delayMs: 2000, delayBetweenCombinationsMs: 5000 };
 
   // Configure the processor
   const processor = new FeedBotProcessor({
@@ -79,6 +89,7 @@ function resolveProvider(): LlmProvider {
     models,
     promptVariations: PROMPT_VARIATIONS,
     modelConfig,
+    ...delays,
     ...(limit !== undefined ? { limit } : {}),
   });
 

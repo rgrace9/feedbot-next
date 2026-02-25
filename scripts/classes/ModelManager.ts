@@ -12,6 +12,7 @@ export interface ModelConfig {
   apiKey: string;
   endpoint?: string;
   apiVersion?: string;
+  fetchCosts?: boolean;
 }
 
 export type { UsageMetadata } from "./providers/providerTypes.js";
@@ -45,6 +46,9 @@ export class ModelManager {
     } else {
       this.providerClient = new OpenRouterModelClient({
         apiKey: config.apiKey,
+        ...(config.fetchCosts !== undefined
+          ? { fetchCosts: config.fetchCosts }
+          : {}),
       });
     }
   }

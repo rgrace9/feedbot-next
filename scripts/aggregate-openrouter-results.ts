@@ -33,6 +33,7 @@ type StateFile = {
         completionTokens?: number;
         totalTokens?: number;
         costUSD?: number;
+        responseId?: string;
       };
     };
   };
@@ -52,6 +53,7 @@ type OpenRouterResultRow = {
   completion_tokens: string;
   total_tokens: string;
   cost_usd: string;
+  response_id: string;
   state_file: string;
 };
 
@@ -179,13 +181,13 @@ function buildMarkdown(rows: OpenRouterResultRow[]): string {
   lines.push("");
   lines.push("## Requests");
   lines.push(
-    "| Model | Prompt | Fingerprint | Timestamp | Total Tokens | Cost (USD) | Hint |",
+    "| Model | Prompt | Response ID | Fingerprint | Timestamp | Prompt Tokens | Completion Tokens | Total Tokens | Cost (USD) | Hint |",
   );
-  lines.push("|---|---|---|---|---:|---:|---|");
+  lines.push("|---|---|---|---|---|---:|---:|---:|---:|---|");
 
   for (const row of rows) {
     lines.push(
-      `| ${escapeInlineMarkdown(row.model)} | ${escapeInlineMarkdown(row.prompt)} | ${escapeInlineMarkdown(row.fingerprint)} | ${escapeInlineMarkdown(row.timestamp)} | ${row.total_tokens || ""} | ${row.cost_usd || ""} | ${escapeInlineMarkdown(row.hint)} |`,
+      `| ${escapeInlineMarkdown(row.model)} | ${escapeInlineMarkdown(row.prompt)} | ${escapeInlineMarkdown(row.response_id)} | ${escapeInlineMarkdown(row.fingerprint)} | ${escapeInlineMarkdown(row.timestamp)} | ${row.prompt_tokens || ""} | ${row.completion_tokens || ""} | ${row.total_tokens || ""} | ${row.cost_usd || ""} | ${escapeInlineMarkdown(row.hint)} |`,
     );
   }
 
@@ -244,6 +246,7 @@ function buildMarkdown(rows: OpenRouterResultRow[]): string {
         completion_tokens: formatMaybeNumber(result.usage?.completionTokens),
         total_tokens: formatMaybeNumber(result.usage?.totalTokens),
         cost_usd: formatMaybeCost(result.usage?.costUSD),
+        response_id: result.usage?.responseId ?? "",
         state_file: progressFile.filename,
       });
     }
@@ -270,6 +273,7 @@ function buildMarkdown(rows: OpenRouterResultRow[]): string {
     "completion_tokens",
     "total_tokens",
     "cost_usd",
+    "response_id",
     "state_file",
   ];
 

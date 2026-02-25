@@ -12,7 +12,7 @@ const readmeContent = fs.readFileSync(filePath, "utf8");
 export const PROMPT_VARIATIONS = [
   // "concept-oriented",
   "checklist-strategy",
-  "chain-of-thought",
+  // "chain-of-thought",
   // "test-design",
   // "reflection-prompting",
   // "tiered-specific-0",
