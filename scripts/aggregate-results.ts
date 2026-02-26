@@ -3,6 +3,7 @@ import { stringify } from "csv-stringify/sync";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
+import { DATASET } from "../constants/spreadsheets";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -227,7 +228,7 @@ function buildMarkdownReport(
 
 // Main aggregation function
 (async () => {
-  const CSV_PATH = path.join(__dirname, "../data/evaluation_dataset.csv");
+  const CSV_PATH = path.join(__dirname, DATASET);
   const OUTPUT_PATH = path.join(
     __dirname,
     "../feedbotOutput/aggregated_results.csv",

@@ -4,6 +4,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
 import { OPENROUTER_MODELS } from "../constants/models.js";
+import { DATASET } from "../constants/spreadsheets.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -198,7 +199,7 @@ function buildMarkdown(rows: OpenRouterResultRow[]): string {
   const outputDir = path.join(__dirname, "../feedbotOutput");
   const csvPath = path.join(outputDir, "openrouter_aggregated_results.csv");
   const markdownPath = path.join(outputDir, "openrouter_aggregated_results.md");
-  const datasetPath = path.join(__dirname, "../data/evaluation_dataset.csv");
+  const datasetPath = path.join(__dirname, DATASET);
 
   console.log("Aggregating OpenRouter progress files...");
 

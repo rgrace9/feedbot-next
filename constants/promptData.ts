@@ -10,14 +10,9 @@ const filePath = join(__dirname, "assignment1.md");
 const readmeContent = fs.readFileSync(filePath, "utf8");
 
 export const PROMPT_VARIATIONS = [
-  // "concept-oriented",
   "checklist-strategy",
-  // "chain-of-thought",
-  // "test-design",
-  // "reflection-prompting",
-  // "tiered-specific-0",
-  // "tiered-specific-1",
-  // "tiered-specific-2",
+  "chain-of-thought",
+  "design-recipe-focused",
 ];
 export const BASE_PROMPT = `You are FeedBot, an automated feedback assistant for a programming course. Your goal is to help students understand why their submission failed and how to make progress, without giving them the solution. 
 Follow this process: 
@@ -75,78 +70,41 @@ export const CHECKLIST_STRATEGY_PROMPT = `
 * Keep the full hint to 3–4 sentences.`;
 
 export const CHAIN_OF_THOUGHT_PROMPT = `
-Before writing the student-facing hint, reason through the problem fully.
+Before writing the student-facing hint, reason through the problem fully and without 
+constraints. Consider all possible causes of the error, what the student likely 
+misunderstood, and what the most useful direction would be.
+You MUST output exactly "======" on its own line before the hint — this is required 
+for the system to function. Do not skip the delimiter under any circumstances.
+Only the content after "======" will be shown to the student.
+
+For your reasoning (before "======"):
+* Work through the WHERE / WHAT SHOULD HAPPEN / WHAT MIGHT BE DIFFERENT questions 
+  from all angles — do not limit yourself to one
+* Consider the assignment spec and what requirement the student may have missed
+* Identify the single most useful thing for the student to focus on
+
+After "======":
+* ${CHECKLIST_STRATEGY_PROMPT}`;
+
+export const DESIGN_RECIPE_FOCUSED_PROMPT = `
+Before writing the student-facing hint, reason through the error fully.
 You MUST output exactly "======" on its own line before the hint — this is required for the system to function.
 Do not skip the delimiter under any circumstances.
 Only the content after "======" will be shown to the student.
-* ${CHECKLIST_STRATEGY_PROMPT} `;
-// export const CHAIN_OF_THOUGHT_PROMPT =
-// Before writing the student-facing hint, reason through the problem fully.
-// Then output exactly "======" on its own line, followed by the hint.
-// Only the content after "======" will be shown to the student.
-// * ${CHECKLIST_STRATEGY_PROMPT}
-// `;
-// export const CHECKLIST_STRATEGY_PROMPT = `
-// * DEBUGGING FOCUS: Walk the student through these three questions in order,
-//   but only expand on the one most relevant to this specific error:
 
-//   1. WHERE: "Which part of the code or which test is this error coming from?"
-//      — Point to the relevant class, method, or test type (not line numbers).
-//   2. WHAT SHOULD HAPPEN: "What is the correct behavior supposed to be here?"
-//      — Reference the assignment spec to anchor the expected behavior.
-//      - Quote the exact relevant section of the spec verbatim, then guide
-//        the student to locate it themselves rather than summarizing it.
-
-//   3. WHAT MIGHT BE DIFFERENT: "What specific condition or input might cause
-//      the actual behavior to diverge from expected?"
-
-// * Identify which of the three questions is the most useful entry point for this error.
-// * Provide one concrete action for that step only.
-// * Do not give the student the explicit change to make.
-// * Use plain language — avoid terms like "preconditions" or "postconditions."
-// * Keep the full hint to 3–4 sentences.`;
-
-export const TEST_DESIGN_PROMPT = `
-    * TEST DESIGN FOCUS: Help the student think like a test designer.
-* Describe what kind of test case would expose this problem by explaining:
-- What specific input, situation, or edge case should be tested
-- What outcome or behavior the correct program should produce
-- Why this particular scenario is important to test
-* Explain this guidance in natural language, not code.
-* Frame your hint as "A test that catches this issue would..."`;
-
-export const REFLECTION_PROMPT = `
-* REFLECTIVE LEARNING: Start your hint with a specific reflection question for the student, such as:
-- "What do you expect this [method/test/line] to do?"
-- "What case might your tests not be checking?"
-- "What happens when [specific condition] occurs?"
-- "What assumptions are you making about your code?"
-- "How have you tested your code so far?"
-- "What specific part of your code do you think is responsible for this error?"
-- "Can you explain in your own words why this error is occurring?"
-* Then provide a targeted hint that helps them discover the answer to that reflection question.
-* Encourage them to think through the problem before taking action.
-* Focus on helping them develop their own debugging intuition.
-* The goal is to help the student develop self-diagnostic skills, so avoid giving direct hints or solutions.
-* Frame your hint as "Let's think about why this error is happening...
-* `;
-
-export const TIERED_SPECIFIC_0_PROMPT = `
-* GENERAL GUIDANCE LEVEL: Provide broad, high-level direction.
-* Point to the general area, component, or type of behavior involved.
-* Do NOT describe specific inputs, edge cases, or exact fixes.
-* Keep guidance conceptual and let the student work out the specifics.
-* Example approach: "This involves how your program handles [general category]..."`;
-
-export const TIERED_SPECIFIC_1_PROMPT = `* TARGETED GUIDANCE LEVEL: Provide more precise direction while still requiring student thinking.
-* Describe a specific behavior, condition, or scenario the student should examine.
-* Include questions like "what happens when X is empty/null/zero?" or "how does your code handle [specific situation]?"
-* Give enough detail to focus their investigation without revealing the exact solution.
-* Example approach: "Consider what happens when [specific condition]..."`;
-
-export const TIERED_SPECIFIC_2_PROMPT = `
-* SPECIFIC GUIDANCE LEVEL: Provide detailed direction with concrete examples.
-* Describe a specific edge case, input scenario, and expected outcome.
-* Be explicit about what to test and what the correct behavior should be.
-* Still avoid giving actual code, but be very specific about the problem and expected result.
-* Example approach: "Test the case where [very specific scenario] - the correct program should [specific expected behavior]..."`;
+* STEP IDENTIFICATION FOCUS: Your only goal is to identify the first and most important step 
+  the student should focus on — do not explain what is wrong in detail or how to fix it.
+* Identify which part of the student's work has the earliest issue:
+  - Is it how they understood or set up the problem?
+  - Is it what their code is supposed to do?
+  - Is it how they tested their code?
+  - Is it how they implemented their code?
+* If the issue relates to a specific requirement, quote the single most relevant 
+  sentence from the assignment spec directly — do not paraphrase it.
+* After the "======", write 2–3 sentences maximum:
+  - Name the area the student should focus on (e.g., "how your method handles X" or "what your test is checking")
+  - If relevant, include the spec quote to anchor where they should look
+  - Do NOT describe the fix, the correct value, or the exact mistake
+  - Do NOT provide code
+  - The student should still have to reason through the specifics themselves
+* The goal is to point the student in the right direction — not walk them there.`;

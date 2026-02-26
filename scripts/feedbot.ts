@@ -3,6 +3,7 @@ import * as path from "path";
 import { fileURLToPath } from "url";
 import { MODELS_BY_PROVIDER, type LlmProvider } from "../constants/models.js";
 import { PROMPT_VARIATIONS } from "../constants/promptData.js";
+import { DATASET } from "../constants/spreadsheets.js";
 import { FeedBotProcessor } from "./classes/FeedBotProcessor.js";
 
 dotenv.config();
@@ -84,7 +85,7 @@ function resolveProvider(): LlmProvider {
 
   // Configure the processor
   const processor = new FeedBotProcessor({
-    csvPath: path.join(__dirname, "../data/evaluation_dataset.csv"),
+    csvPath: path.join(__dirname, DATASET),
     outputDir: path.join(__dirname, "../feedbotOutput"),
     models,
     promptVariations: PROMPT_VARIATIONS,

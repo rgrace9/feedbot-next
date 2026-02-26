@@ -2,12 +2,7 @@ import {
   BASE_PROMPT,
   CHAIN_OF_THOUGHT_PROMPT,
   CHECKLIST_STRATEGY_PROMPT,
-  CONCEPT_ORIENTED_PROMPT,
-  REFLECTION_PROMPT,
-  TEST_DESIGN_PROMPT,
-  TIERED_SPECIFIC_0_PROMPT,
-  TIERED_SPECIFIC_1_PROMPT,
-  TIERED_SPECIFIC_2_PROMPT,
+  DESIGN_RECIPE_FOCUSED_PROMPT,
 } from "../../constants/promptData.js";
 
 export interface EvaluationRow {
@@ -76,33 +71,17 @@ export class PromptGenerator {
    */
   private getPromptVariationContent(promptVariation: string): string {
     switch (promptVariation) {
-      case "concept-oriented":
-        return CONCEPT_ORIENTED_PROMPT;
-
-      case "test-design":
-        return TEST_DESIGN_PROMPT;
-
       case "checklist-strategy":
         return CHECKLIST_STRATEGY_PROMPT;
 
       case "chain-of-thought":
         return CHAIN_OF_THOUGHT_PROMPT;
 
-      case "reflection-prompting":
-        return REFLECTION_PROMPT;
-
-      case "tiered-specific-0":
-        return TIERED_SPECIFIC_0_PROMPT;
-
-      case "tiered-specific-1":
-        return TIERED_SPECIFIC_1_PROMPT;
-
-      case "tiered-specific-2":
-        return TIERED_SPECIFIC_2_PROMPT;
+      case "design-recipe-focused":
+        return DESIGN_RECIPE_FOCUSED_PROMPT;
 
       default:
-        // Return empty string for unrecognized variations (base prompt only)
-        return "";
+        return BASE_PROMPT;
     }
   }
 
