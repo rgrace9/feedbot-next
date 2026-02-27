@@ -10,7 +10,7 @@ export const AZURE_MODELS = [
 export const OPENROUTER_MODELS = [
   "openai/gpt-4o-mini",
   "deepseek/deepseek-chat-v3",
-  "qwen/qwen3-32b",
+  "qwen/qwen3.5-flash-02-23",
   "anthropic/claude-3-haiku",
   "google/gemini-2.5-flash-lite",
 ];

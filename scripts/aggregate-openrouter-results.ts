@@ -50,6 +50,7 @@ type OpenRouterResultRow = {
   clean_error_text: string;
   timestamp: string;
   hint: string;
+  llm_response_raw: string;
   prompt_tokens: string;
   completion_tokens: string;
   total_tokens: string;
@@ -122,6 +123,27 @@ function escapeInlineMarkdown(value: string): string {
   return value.replace(/\r?\n/g, " ").replace(/\|/g, "\\|");
 }
 
+function extractFinalHint(rawResponse: string): string {
+  const normalized = rawResponse.trim();
+  if (!normalized) {
+    return "";
+  }
+
+  try {
+    const parsed = JSON.parse(normalized) as unknown;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      const nestedHint = (parsed as { hint?: unknown }).hint;
+      if (typeof nestedHint === "string") {
+        return nestedHint.trim();
+      }
+    }
+  } catch {
+    // response is not JSON, use raw text
+  }
+
+  return normalized;
+}
+
 function buildMarkdown(rows: OpenRouterResultRow[]): string {
   const lines: string[] = [];
   lines.push("# OpenRouter FeedBot Aggregated Results");
@@ -182,7 +204,7 @@ function buildMarkdown(rows: OpenRouterResultRow[]): string {
   lines.push("");
   lines.push("## Requests");
   lines.push(
-    "| Model | Prompt | Response ID | Fingerprint | Timestamp | Prompt Tokens | Completion Tokens | Total Tokens | Cost (USD) | Hint |",
+    "| Model | Prompt | Response ID | Fingerprint | Timestamp | Prompt Tokens | Completion Tokens | Total Tokens | Cost (USD) | Extracted Hint |",
   );
   lines.push("|---|---|---|---|---|---:|---:|---:|---:|---|");
 
@@ -190,6 +212,24 @@ function buildMarkdown(rows: OpenRouterResultRow[]): string {
     lines.push(
       `| ${escapeInlineMarkdown(row.model)} | ${escapeInlineMarkdown(row.prompt)} | ${escapeInlineMarkdown(row.response_id)} | ${escapeInlineMarkdown(row.fingerprint)} | ${escapeInlineMarkdown(row.timestamp)} | ${row.prompt_tokens || ""} | ${row.completion_tokens || ""} | ${row.total_tokens || ""} | ${row.cost_usd || ""} | ${escapeInlineMarkdown(row.hint)} |`,
     );
+  }
+
+  lines.push("");
+  lines.push("## Full LLM Responses");
+  lines.push("");
+
+  for (const row of rows) {
+    lines.push(
+      `### ${row.model} | ${row.prompt} | ${row.fingerprint} | ${row.response_id || "(no response id)"}`,
+    );
+    lines.push("");
+    lines.push(`- Timestamp: ${row.timestamp}`);
+    lines.push(`- Extracted Hint: ${escapeInlineMarkdown(row.hint)}`);
+    lines.push("");
+    lines.push("```json");
+    lines.push(row.llm_response_raw);
+    lines.push("```");
+    lines.push("");
   }
 
   return lines.join("\n");
@@ -232,6 +272,7 @@ function buildMarkdown(rows: OpenRouterResultRow[]): string {
 
     for (const [fingerprint, result] of Object.entries(state.processed)) {
       const metadata = metadataByFingerprint[fingerprint];
+      const llmResponseRaw = typeof result.hint === "string" ? result.hint : "";
 
       aggregatedRows.push({
         model: progressFile.model,
@@ -242,7 +283,8 @@ function buildMarkdown(rows: OpenRouterResultRow[]): string {
         error_type: metadata?.error_type ?? "",
         clean_error_text: metadata?.clean_error_text ?? "",
         timestamp: result.timestamp,
-        hint: result.hint,
+        hint: extractFinalHint(llmResponseRaw),
+        llm_response_raw: llmResponseRaw,
         prompt_tokens: formatMaybeNumber(result.usage?.promptTokens),
         completion_tokens: formatMaybeNumber(result.usage?.completionTokens),
         total_tokens: formatMaybeNumber(result.usage?.totalTokens),
@@ -270,6 +312,7 @@ function buildMarkdown(rows: OpenRouterResultRow[]): string {
     "clean_error_text",
     "timestamp",
     "hint",
+    "llm_response_raw",
     "prompt_tokens",
     "completion_tokens",
     "total_tokens",

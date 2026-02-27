@@ -16,10 +16,15 @@ export interface ChatMessage {
   content: string;
 }
 
+export interface ProcessOptions {
+  maxTokens?: number;
+}
+
 export interface LlmProviderClient {
   process(
     model: string,
     messages: ChatMessage[],
     temperature?: number,
+    options?: ProcessOptions,
   ): Promise<ProviderResult>;
 }

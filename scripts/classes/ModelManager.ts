@@ -13,6 +13,7 @@ export interface ModelConfig {
   endpoint?: string;
   apiVersion?: string;
   fetchCosts?: boolean;
+  maxTokens?: number;
 }
 
 export type { UsageMetadata } from "./providers/providerTypes.js";
@@ -49,6 +50,9 @@ export class ModelManager {
         ...(config.fetchCosts !== undefined
           ? { fetchCosts: config.fetchCosts }
           : {}),
+        ...(config.maxTokens !== undefined
+          ? { maxTokens: config.maxTokens }
+          : {}),
       });
     }
   }
@@ -80,6 +84,10 @@ export class ModelManager {
         model,
         messages,
         temperature,
+        this.config.provider === "openrouter" &&
+          this.config.maxTokens !== undefined
+          ? { maxTokens: this.config.maxTokens }
+          : undefined,
       );
 
       const processingResult: ProcessingResult = {

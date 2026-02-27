@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import type {
   ChatMessage,
   LlmProviderClient,
+  ProcessOptions,
   ProviderResult,
 } from "./providerTypes.js";
 
@@ -27,6 +28,7 @@ export class AzureModelClient implements LlmProviderClient {
     model: string,
     messages: ChatMessage[],
     temperature?: number,
+    _options?: ProcessOptions,
   ): Promise<ProviderResult> {
     const payload: any = { model, messages };
     if (temperature !== undefined) payload.temperature = temperature;

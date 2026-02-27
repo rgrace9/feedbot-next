@@ -15,14 +15,17 @@ function parseArgs(): {
   limit?: number;
   trackCosts: boolean;
   concurrency?: number;
+  maxTokens?: number;
 } {
   const args = process.argv.slice(2);
   const limitIndex = args.indexOf("--limit");
   const concurrencyIndex = args.indexOf("--concurrency");
+  const maxTokensIndex = args.indexOf("--max-tokens");
   const trackCosts = args.includes("--track-costs");
 
   let limit: number | undefined;
   let concurrency: number | undefined;
+  let maxTokens: number | undefined;
 
   if (limitIndex !== -1 && args[limitIndex + 1]) {
     const parsedLimit = parseInt(args[limitIndex + 1]!, 10);
@@ -38,11 +41,28 @@ function parseArgs(): {
     }
   }
 
+  if (maxTokensIndex !== -1 && args[maxTokensIndex + 1]) {
+    const parsedMaxTokens = parseInt(args[maxTokensIndex + 1]!, 10);
+    if (!isNaN(parsedMaxTokens) && parsedMaxTokens > 0) {
+      maxTokens = parsedMaxTokens;
+    }
+  }
+
   return {
     ...(limit !== undefined ? { limit } : {}),
     ...(concurrency !== undefined ? { concurrency } : {}),
+    ...(maxTokens !== undefined ? { maxTokens } : {}),
     trackCosts,
   };
+}
+
+function parsePositiveInteger(value?: string): number | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
 }
 
 function resolveProvider(): LlmProvider {
@@ -59,8 +79,9 @@ function resolveProvider(): LlmProvider {
 
 // Main entry point
 (async () => {
-  const { limit, trackCosts, concurrency } = parseArgs();
+  const { limit, trackCosts, concurrency, maxTokens } = parseArgs();
   const provider = resolveProvider();
+  const envMaxTokens = parsePositiveInteger(process.env.OPENROUTER_MAX_TOKENS);
 
   // Validate environment variables
   if (provider === "azure") {
@@ -92,6 +113,11 @@ function resolveProvider(): LlmProvider {
           provider,
           apiKey: process.env.OPEN_ROUTER_KEY!,
           fetchCosts: trackCosts,
+          ...(maxTokens !== undefined
+            ? { maxTokens }
+            : envMaxTokens !== undefined
+              ? { maxTokens: envMaxTokens }
+              : {}),
         };
 
   // Set delays based on provider
