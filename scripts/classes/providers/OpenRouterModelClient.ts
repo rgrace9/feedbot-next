@@ -95,6 +95,7 @@ export class OpenRouterModelClient implements LlmProviderClient {
       chatGenerationParams: {
         model,
         messages,
+        maxTokens: 500,
         stream: false,
         ...(temperature !== undefined ? { temperature } : {}),
       },
