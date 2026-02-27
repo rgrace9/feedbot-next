@@ -28,6 +28,7 @@ interface StateFile {
  */
 export interface FeedBotConfig {
   csvPath: string;
+  concurrency?: number;
   outputDir: string;
   models: string[];
   promptVariations: string[];
@@ -53,6 +54,7 @@ export class FeedBotProcessor {
     this.config.delayMs = config.delayMs ?? 0;
     this.config.delayBetweenCombinationsMs =
       config.delayBetweenCombinationsMs ?? 0;
+    this.config.concurrency = Math.max(1, config.concurrency ?? 1);
     this.promptGenerator = new PromptGenerator();
     this.modelManager = new ModelManager(
       config.modelConfig,
@@ -66,6 +68,31 @@ export class FeedBotProcessor {
    */
   private async sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  private async runWithConcurrency<T>(
+    items: T[],
+    concurrency: number,
+    worker: (item: T, index: number) => Promise<void>,
+  ): Promise<void> {
+    if (items.length === 0) {
+      return;
+    }
+
+    let nextIndex = 0;
+    const workerCount = Math.min(Math.max(1, concurrency), items.length);
+
+    const workers = Array.from({ length: workerCount }, async () => {
+      while (true) {
+        const currentIndex = nextIndex++;
+        if (currentIndex >= items.length) {
+          return;
+        }
+        await worker(items[currentIndex]!, currentIndex);
+      }
+    });
+
+    await Promise.all(workers);
   }
 
   /**
@@ -263,7 +290,11 @@ export class FeedBotProcessor {
       this.resultsAggregator.incrementProcessed(model, promptVariation);
 
       // Add delay between requests if configured
-      if (this.config.delayMs! > 0 && index < total) {
+      if (
+        this.config.concurrency === 1 &&
+        this.config.delayMs! > 0 &&
+        index < total
+      ) {
         // Don't delay after the last item
         console.log(`Waiting ${this.config.delayMs}ms before next request...`);
         await this.sleep(this.config.delayMs!);
@@ -306,25 +337,29 @@ export class FeedBotProcessor {
       promptVariation,
       `Starting combination: ${total} row${total === 1 ? "" : "s"} to process`,
     );
-    if (this.config.delayMs! > 0) {
+    if (this.config.concurrency! > 1) {
+      console.log(`  (concurrency: ${this.config.concurrency})`);
+    }
+    if (this.config.concurrency === 1 && this.config.delayMs! > 0) {
       console.log(`  (${this.config.delayMs}ms delay between requests)`);
     }
     console.log("---\n");
 
-    // Process each row with delays
-    for (let i = 0; i < rowsToProcess.length; i++) {
-      const row = rowsToProcess[i];
-      if (!row) continue;
-      await this.processSingleRow(
-        row,
-        model,
-        promptVariation,
-        state,
-        statePath,
-        i + 1,
-        total,
-      );
-    }
+    await this.runWithConcurrency(
+      rowsToProcess,
+      this.config.concurrency ?? 1,
+      async (row, i) => {
+        await this.processSingleRow(
+          row,
+          model,
+          promptVariation,
+          state,
+          statePath,
+          i + 1,
+          total,
+        );
+      },
+    );
 
     this.log(
       model,
@@ -346,6 +381,7 @@ export class FeedBotProcessor {
     console.log(
       `Rate limiting: ${this.config.delayMs}ms delay between requests, ${this.config.delayBetweenCombinationsMs}ms between combinations`,
     );
+    console.log(`Concurrency: ${this.config.concurrency}`);
     if (this.config.limit) {
       console.log(
         `(Limited to first ${this.config.limit} rows per combination)`,

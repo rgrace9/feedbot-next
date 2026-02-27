@@ -11,19 +11,38 @@ dotenv.config();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Parse CLI arguments
-function parseArgs(): { limit?: number; trackCosts: boolean } {
+function parseArgs(): {
+  limit?: number;
+  trackCosts: boolean;
+  concurrency?: number;
+} {
   const args = process.argv.slice(2);
   const limitIndex = args.indexOf("--limit");
+  const concurrencyIndex = args.indexOf("--concurrency");
   const trackCosts = args.includes("--track-costs");
 
+  let limit: number | undefined;
+  let concurrency: number | undefined;
+
   if (limitIndex !== -1 && args[limitIndex + 1]) {
-    const limit = parseInt(args[limitIndex + 1]!, 10);
-    if (!isNaN(limit)) {
-      return { limit, trackCosts };
+    const parsedLimit = parseInt(args[limitIndex + 1]!, 10);
+    if (!isNaN(parsedLimit)) {
+      limit = parsedLimit;
     }
   }
 
-  return { trackCosts };
+  if (concurrencyIndex !== -1 && args[concurrencyIndex + 1]) {
+    const parsedConcurrency = parseInt(args[concurrencyIndex + 1]!, 10);
+    if (!isNaN(parsedConcurrency) && parsedConcurrency > 0) {
+      concurrency = parsedConcurrency;
+    }
+  }
+
+  return {
+    ...(limit !== undefined ? { limit } : {}),
+    ...(concurrency !== undefined ? { concurrency } : {}),
+    trackCosts,
+  };
 }
 
 function resolveProvider(): LlmProvider {
@@ -40,7 +59,7 @@ function resolveProvider(): LlmProvider {
 
 // Main entry point
 (async () => {
-  const { limit, trackCosts } = parseArgs();
+  const { limit, trackCosts, concurrency } = parseArgs();
   const provider = resolveProvider();
 
   // Validate environment variables
@@ -78,10 +97,10 @@ function resolveProvider(): LlmProvider {
   // Set delays based on provider
   // OpenRouter: no delays needed (generous rate limits)
   // Azure: 2s between requests, 5s between combinations (strict rate limits)
-  const delays =
+  const defaults =
     provider === "openrouter"
-      ? { delayMs: 0, delayBetweenCombinationsMs: 0 }
-      : { delayMs: 2000, delayBetweenCombinationsMs: 5000 };
+      ? { delayMs: 0, delayBetweenCombinationsMs: 0, concurrency: 8 }
+      : { delayMs: 2000, delayBetweenCombinationsMs: 5000, concurrency: 1 };
 
   // Configure the processor
   const processor = new FeedBotProcessor({
@@ -90,7 +109,8 @@ function resolveProvider(): LlmProvider {
     models,
     promptVariations: PROMPT_VARIATIONS,
     modelConfig,
-    ...delays,
+    ...defaults,
+    ...(concurrency !== undefined ? { concurrency } : {}),
     ...(limit !== undefined ? { limit } : {}),
   });
 
