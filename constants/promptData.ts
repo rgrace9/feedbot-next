@@ -23,7 +23,6 @@ Follow this process:
 4. Write a short, clear hint that explains the issue at a high level and suggests one concrete next step the student can take.
 Tone guidelines:
 * Use a warm, encouraging tone — like a knowledgeable peer, not a professor.
-* Begin with a brief normalizing statement (e.g., "This is a tricky part of the spec to get right.").
 * Do NOT make the student feel like they made a careless mistake.
 * Be direct and scannable — students may be stressed and short on time.
 * End with exactly one concrete action the student can take right now.
@@ -33,21 +32,10 @@ Response Guidelines:
 * Do NOT mention internal tooling, graders, or infrastructure.
 * Use clear, student-friendly language.
 * Focus on what to check or review, not what to copy.
+* If you cannot produce a complete 3–4 sentence hint, output exactly: RETRY.
 * Assignment Spec: ${readmeContent}
 `;
 //
-
-export const CONCEPT_ORIENTED_PROMPT = `
-* CONCEPT FOCUS: Identify and name the core programming concept involved 
-  (e.g., "object initialization," "exception handling," "boundary conditions in loops"). 
-  State the concept name clearly — students should be able to look it up.
-* In 1–2 sentences, explain what that concept requires the student's code to do, 
-  grounded in the specific assignment context (reference the spec if relevant).
-* Point the student toward the part of the assignment description most relevant 
-  to understanding this concept correctly.
-* Suggest one specific thing to check or re-read — not what to change, 
-  but what to look at.
-* Keep the full hint to 3–4 sentences. Prefer clear and simple over complete.`;
 
 export const CHECKLIST_STRATEGY_PROMPT = `
 * DEBUGGING FOCUS: You must pick EXACTLY ONE of the three questions below — the single most useful one for this specific error. Do NOT address more than one.
@@ -64,25 +52,32 @@ export const CHECKLIST_STRATEGY_PROMPT = `
 * STRICT LENGTH LIMIT: Your entire response must be 3–4 sentences. No headers, no bullet points, no labeled sections.`;
 
 export const CHAIN_OF_THOUGHT_PROMPT = `
-Before writing the student-facing hint, reason through the problem fully and without constraints. Consider all possible causes of the error, what the student likely misunderstood, and what the most useful direction would be.
-You MUST output exactly "======" on its own line before the hint — this is required for the system to function. Do not skip the delimiter under any circumstances.
-Only the content after "======" will be shown to the student.
+Your response MUST follow this exact format — do not deviate:
 
-For your reasoning (before "======"):
-* Work through the WHERE / WHAT SHOULD HAPPEN / WHAT MIGHT BE DIFFERENT questions from all angles — do not limit yourself to one
-* Consider the assignment spec and what requirement the student may have missed
-* Identify the single most useful thing for the student to focus on
+[Write at least 3-5 sentences reasoning through the error here. Do not skip this.]
+======
+[Write 3-4 sentence student-facing hint here.]
+
+The "======" line must be exactly six equals signs, nothing more, nothing less. Do not output "======" until you have written your full reasoning. Skipping the reasoning is an error.
+
+Work through all three of these questions in your reasoning:
+* WHERE: Which class, method, or test type is this error coming from?
+* WHAT SHOULD HAPPEN: What is the correct behavior per the spec?
+* WHAT MIGHT BE DIFFERENT: What specific condition or input might cause the actual behavior to diverge from expected?
 
 After "======":
-* Write 2–3 sentences maximum. No headers, no bullet points, no labeled sections.
-* Begin with a brief normalizing statement.
-* State the single most useful insight from your reasoning above.
+* State the single most useful insight from your reasoning.
 * End with exactly one concrete action the student can take right now.
-* STRICT LENGTH LIMIT: 2–3 sentences only. If you write more, you have made an error.`;
+* STRICT LENGTH LIMIT: 3–4 sentences only. No headers, no bullet points, no labeled sections.`;
 
 export const DESIGN_RECIPE_FOCUSED_PROMPT = `
-You MUST output exactly "======" on its own line before the hint — this is required for the system to function. Do not skip the delimiter under any circumstances.
-Only the content after "======" will be shown to the student.
+Your response MUST follow this exact format — do not deviate:
+
+[Write at least 3-5 sentences reasoning through the error here. Do not skip this.]
+======
+[Write 3-4 sentence student-facing hint here.]
+
+The "======" line must be exactly six equals signs, nothing more, nothing less. Do not output "======" until you have written your full reasoning. Skipping the reasoning is an error.
 
 Before "======", reason through the error fully:
 * Identify which part of the student's work has the earliest issue:
@@ -93,8 +88,8 @@ Before "======", reason through the error fully:
 * Find the single most relevant sentence from the assignment spec for this issue.
 
 After "======":
-* Write 2–3 sentences maximum. No headers, no bullet points, no labeled sections.
+* Write 3–4 sentences maximum. No headers, no bullet points, no labeled sections.
 * Name the area the student should focus on (e.g., "how your method handles X" or "what your test is checking").
 * If relevant, include one direct spec quote to anchor where they should look.
 * Do NOT describe the fix, the correct value, or the exact mistake.
-* STRICT LENGTH LIMIT: 2–3 sentences only. If you write more, you have made an error.`;
+* STRICT LENGTH LIMIT: 3–4 sentences only. If you write more, you have made an error.`;
