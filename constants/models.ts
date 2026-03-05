@@ -7,12 +7,18 @@ export const AZURE_MODELS = [
 ];
 
 // Cost-focused starter set for comparison on OpenRouter
+// export const OPENROUTER_MODELS = [
+//   "openai/gpt-4o-mini",
+//   "deepseek/deepseek-chat-v3",
+//   "anthropic/claude-3-haiku",
+//   "google/gemini-2.5-flash-lite",
+// ];
+
 export const OPENROUTER_MODELS = [
-  "openai/gpt-4o-mini",
-  "deepseek/deepseek-chat-v3",
-  // "qwen/qwen3.5-flash-02-23",
+  "anthropic/claude-sonnet-4.6",
+  "anthropic/claude-haiku-4.5",
+  "anthropic/claude-sonnet-4.5",
   "anthropic/claude-3-haiku",
-  "google/gemini-2.5-flash-lite",
 ];
 
 export const MODELS_BY_PROVIDER: Record<LlmProvider, string[]> = {
