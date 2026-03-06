@@ -9,6 +9,7 @@
     "group:assignment": "tsx src/assignmentMain.ts",
     "feedbot-one": "tsx scripts/feedbot.ts --limit 1",
     "feedbot:limit": "tsx scripts/feedbot.ts --limit 5",
+    "feedbot:more": "tsx scripts/feedbot.ts --limit 25",
     "feedbot:all": "tsx scripts/feedbot.ts",
     "feedbot:all:track-costs": "tsx scripts/feedbot.ts --track-costs",
     "results:azure": "tsx scripts/aggregate-results.ts",
