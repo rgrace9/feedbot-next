@@ -15,10 +15,10 @@ export const AZURE_MODELS = [
 // ];
 
 export const OPENROUTER_MODELS = [
+  "anthropic/claude-opus-4.6",
   "anthropic/claude-sonnet-4.6",
   "anthropic/claude-haiku-4.5",
-  "anthropic/claude-sonnet-4.5",
-  "anthropic/claude-3-haiku",
+  "google/gemini-2.5-flash-lite",
 ];
 
 export const MODELS_BY_PROVIDER: Record<LlmProvider, string[]> = {
