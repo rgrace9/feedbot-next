@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
-
+import { fetchAssignmentSpec } from "../scripts/fetch-assignment-spec.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -9,11 +9,21 @@ const filePath = join(__dirname, "assignment4.md");
 const readmeContent = fs.readFileSync(filePath, "utf8");
 
 export const PROMPT_VARIATIONS = [
-  "checklist-strategy",
+  // "checklist-strategy",
   "chain-of-thought",
-  "design-recipe-focused",
+  // "design-recipe-focused",
 ];
 
+const ASSIGNMENT_1 =
+  "https://raw.githubusercontent.com/neu-pdi/cs3100-public-resources/refs/heads/main/assignments/cyb1-recipes.md";
+const ASSIGNMENT_2 =
+  "https://raw.githubusercontent.com/neu-pdi/cs3100-public-resources/refs/heads/main/assignments/cyb2-unit-conversion.md";
+const ASSIGNMENT_3 =
+  "https://raw.githubusercontent.com/neu-pdi/cs3100-public-resources/refs/heads/main/assignments/cyb3-json-serialization.md";
+const ASSIGNMENT_4 =
+  "https://raw.githubusercontent.com/neu-pdi/cs3100-public-resources/refs/heads/main/assignments/cyb4-testing.md";
+
+const assignmentSpecMarkdown = await fetchAssignmentSpec(ASSIGNMENT_1);
 // ═══════════════════════════════════════════════════════════════════
 // BASE PROMPT — Shared across all strategies
 //
@@ -155,7 +165,7 @@ If you cannot produce a complete, rule-compliant response, output exactly: RETRY
 </failure_handling>
 
 <assignment_spec>
-${readmeContent}
+${assignmentSpecMarkdown}
 </assignment_spec>`;
 
 // ═══════════════════════════════════════════════════════════════════
@@ -255,3 +265,5 @@ Write a 3–4 sentence paragraph that guides the student toward fixing the earli
 
 The output must read as warm, direct advice — not a structured report.
 </strategy>`;
+
+console.log(`${BASE_PROMPT}`);
