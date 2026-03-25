@@ -5,6 +5,11 @@ import * as path from "path";
 import { fileURLToPath } from "url";
 import { OPENROUTER_MODELS } from "../constants/models.js";
 import { DATASET } from "../constants/spreadsheets.js";
+import {
+  normalizeEvaluationRow,
+  type EvaluationRow,
+  type RawEvaluationRow,
+} from "./classes/PromptGenerator.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -12,16 +17,6 @@ type ProgressFile = {
   model: string;
   prompt: string;
   filename: string;
-};
-
-type EvaluationRow = {
-  category: string;
-  test_name: string;
-  error_type: string;
-  count: string;
-  fingerprint: string;
-  canonical_key: string;
-  clean_error_text: string;
 };
 
 type StateFile = {
@@ -44,10 +39,16 @@ type OpenRouterResultRow = {
   model: string;
   prompt: string;
   fingerprint: string;
-  category: string;
-  test_name: string;
-  error_type: string;
-  clean_error_text: string;
+  name: string;
+  score: string;
+  max_score: string;
+  is_active: string;
+  title: string;
+  profile_id: string;
+  id: string;
+  part: string;
+  grader_result_id: string;
+  original_error_output: string;
   timestamp: string;
   hint: string;
   prompt_tokens: string;
@@ -118,81 +119,49 @@ function formatMaybeCost(value: number | undefined): string {
   return value === undefined ? "" : value.toFixed(6);
 }
 
-function escapeInlineMarkdown(value: string): string {
-  return value.replace(/\r?\n/g, " ").replace(/\|/g, "\\|");
+/** Longest contiguous run of backticks (for safe CommonMark fenced blocks). */
+function longestBacktickRun(s: string): number {
+  let max = 0;
+  let run = 0;
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === "`") {
+      run++;
+      max = Math.max(max, run);
+    } else {
+      run = 0;
+    }
+  }
+  return max;
+}
+
+/** Renders body as literal text so `---`, `###`, etc. do not affect surrounding markdown. */
+function fencedTextBlock(body: string): string {
+  const fenceLen = Math.max(3, longestBacktickRun(body) + 1);
+  const fence = "`".repeat(fenceLen);
+  return `${fence}text\n${body}\n${fence}`;
 }
 
 function buildMarkdown(rows: OpenRouterResultRow[]): string {
-  const lines: string[] = [];
-  lines.push("# OpenRouter FeedBot Aggregated Results");
-  lines.push("");
-  lines.push(`Total requests: ${rows.length}`);
-  lines.push("");
+  const sections: string[] = [];
 
-  const byModel: Record<
-    string,
-    {
-      count: number;
-      promptTokens: number;
-      completionTokens: number;
-      totalTokens: number;
-      cost: number;
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]!;
+    const chunk: string[] = [];
+    if (i > 0) {
+      chunk.push("---");
+      chunk.push("");
     }
-  > = {};
-
-  for (const row of rows) {
-    if (!byModel[row.model]) {
-      byModel[row.model] = {
-        count: 0,
-        promptTokens: 0,
-        completionTokens: 0,
-        totalTokens: 0,
-        cost: 0,
-      };
-    }
-    byModel[row.model]!.count += 1;
-    byModel[row.model]!.promptTokens += Number.parseInt(
-      row.prompt_tokens || "0",
-      10,
-    );
-    byModel[row.model]!.completionTokens += Number.parseInt(
-      row.completion_tokens || "0",
-      10,
-    );
-    byModel[row.model]!.totalTokens += Number.parseInt(
-      row.total_tokens || "0",
-      10,
-    );
-    byModel[row.model]!.cost += Number.parseFloat(row.cost_usd || "0");
+    chunk.push("### Error");
+    chunk.push("");
+    chunk.push(fencedTextBlock(row.original_error_output));
+    chunk.push("");
+    chunk.push("### LLM Response");
+    chunk.push("");
+    chunk.push(fencedTextBlock(row.hint));
+    sections.push(chunk.join("\n"));
   }
 
-  lines.push("## Model Summary");
-  lines.push(
-    "| Model | Requests | Tokens: Prompt | Tokens: Completion | Tokens: Total | Total Cost (USD) | Avg Cost / Request |",
-  );
-  lines.push("|---|---:|---:|---:|---:|---:|---:|");
-
-  for (const [model, summary] of Object.entries(byModel)) {
-    const avgCost = summary.count > 0 ? summary.cost / summary.count : 0;
-    lines.push(
-      `| ${model} | ${summary.count} | ${summary.promptTokens} | ${summary.completionTokens} | ${summary.totalTokens} | ${summary.cost.toFixed(6)} | ${avgCost.toFixed(6)} |`,
-    );
-  }
-
-  lines.push("");
-  lines.push("## Requests");
-  lines.push(
-    "| Model | Prompt | Response ID | Fingerprint | Timestamp | Prompt Tokens | Completion Tokens | Total Tokens | Cost (USD) | Hint |",
-  );
-  lines.push("|---|---|---|---|---|---:|---:|---:|---:|---|");
-
-  for (const row of rows) {
-    lines.push(
-      `| ${escapeInlineMarkdown(row.model)} | ${escapeInlineMarkdown(row.prompt)} | ${escapeInlineMarkdown(row.response_id)} | ${escapeInlineMarkdown(row.fingerprint)} | ${escapeInlineMarkdown(row.timestamp)} | ${row.prompt_tokens || ""} | ${row.completion_tokens || ""} | ${row.total_tokens || ""} | ${row.cost_usd || ""} | ${escapeInlineMarkdown(row.hint)} |`,
-    );
-  }
-
-  return lines.join("\n");
+  return sections.join("\n");
 }
 
 (async () => {
@@ -210,13 +179,17 @@ function buildMarkdown(rows: OpenRouterResultRow[]): string {
   }
 
   const datasetContent = readFileSync(datasetPath, "utf-8");
-  const datasetRows: EvaluationRow[] = parse(datasetContent, {
+  const datasetRows = parse(datasetContent, {
     columns: true,
     skip_empty_lines: true,
-  });
+  }) as RawEvaluationRow[];
+
+  const normalizedDatasetRows: EvaluationRow[] = datasetRows.map((row) =>
+    normalizeEvaluationRow(row),
+  );
 
   const metadataByFingerprint: Record<string, EvaluationRow> = {};
-  for (const row of datasetRows) {
+  for (const row of normalizedDatasetRows) {
     metadataByFingerprint[row.fingerprint] = row;
   }
 
@@ -231,16 +204,22 @@ function buildMarkdown(rows: OpenRouterResultRow[]): string {
     }
 
     for (const [fingerprint, result] of Object.entries(state.processed)) {
-      const metadata = metadataByFingerprint[fingerprint];
+      const row = metadataByFingerprint[fingerprint];
 
       aggregatedRows.push({
         model: progressFile.model,
         prompt: progressFile.prompt,
         fingerprint,
-        category: metadata?.category ?? "",
-        test_name: metadata?.test_name ?? "",
-        error_type: metadata?.error_type ?? "",
-        clean_error_text: metadata?.clean_error_text ?? "",
+        name: row?.name ?? "",
+        score: row?.score ?? "",
+        max_score: row?.max_score ?? "",
+        is_active: row ? String(row.is_active) : "",
+        title: row?.title ?? "",
+        profile_id: row?.profile_id ?? "",
+        id: row?.id ?? "",
+        part: row?.part ?? "",
+        grader_result_id: row?.grader_result_id ?? "",
+        original_error_output: row?.output ?? "",
         timestamp: result.timestamp,
         hint: result.hint,
         prompt_tokens: formatMaybeNumber(result.usage?.promptTokens),
@@ -264,10 +243,16 @@ function buildMarkdown(rows: OpenRouterResultRow[]): string {
     "model",
     "prompt",
     "fingerprint",
-    "category",
-    "test_name",
-    "error_type",
-    "clean_error_text",
+    "name",
+    "score",
+    "max_score",
+    "is_active",
+    "title",
+    "profile_id",
+    "id",
+    "part",
+    "grader_result_id",
+    "original_error_output",
     "timestamp",
     "hint",
     "prompt_tokens",

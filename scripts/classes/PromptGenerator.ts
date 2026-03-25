@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import {
   BASE_PROMPT,
   CHAIN_OF_THOUGHT_PROMPT,
@@ -6,13 +7,87 @@ import {
 } from "../../constants/promptData.js";
 
 export interface EvaluationRow {
-  category: string;
-  test_name: string;
-  error_type: string;
-  count: string;
+  name: string;
+  score: string;
+  max_score: string;
+  output: string;
+  is_active: boolean;
+  title: string;
+  profile_id: string;
+  id: string;
+  part: string;
+  grader_result_id: string;
   fingerprint: string;
-  canonical_key: string;
-  clean_error_text: string;
+}
+
+export interface RawEvaluationRow {
+  [key: string]: unknown;
+}
+
+/** Every dataset must include these; other columns are optional. */
+export const REQUIRED_DATASET_COLUMNS = [
+  "name",
+  "score",
+  "max_score",
+  "output",
+] as const;
+
+function toText(value: unknown): string {
+  return typeof value === "string" ? value : value == null ? "" : String(value);
+}
+
+function toBoolean(value: unknown): boolean {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  const normalized = toText(value).trim().toLowerCase();
+  return ["true", "1", "yes", "y"].includes(normalized);
+}
+
+function buildFingerprint(row: {
+  profile_id: string;
+  title: string;
+  name: string;
+  output: string;
+  id: string;
+  part: string;
+  grader_result_id: string;
+}): string {
+  let source: string;
+  if (row.grader_result_id) {
+    source = [row.grader_result_id, row.name, row.output].join("||");
+  } else if (row.id) {
+    source = [row.id, row.part, row.name, row.output].join("||");
+  } else {
+    source = [row.profile_id, row.title, row.name, row.output].join("||");
+  }
+  return createHash("sha256").update(source).digest("hex");
+}
+
+export function normalizeEvaluationRow(
+  rawRow: RawEvaluationRow,
+): EvaluationRow {
+  const isActive =
+    "is_active" in rawRow ? toBoolean(rawRow.is_active) : true;
+
+  const row = {
+    name: toText(rawRow.name).trim(),
+    score: toText(rawRow.score).trim(),
+    max_score: toText(rawRow.max_score).trim(),
+    output: toText(rawRow.output).trim(),
+    is_active: isActive,
+    title: toText(rawRow.title).trim(),
+    profile_id: toText(rawRow.profile_id).trim(),
+    id: toText(rawRow.id).trim(),
+    part: toText(rawRow.part).trim(),
+    grader_result_id: toText(rawRow.grader_result_id).trim(),
+  };
+
+  return {
+    ...row,
+    fingerprint: buildFingerprint(row),
+  };
 }
 
 /**
@@ -28,22 +103,6 @@ export class PromptGenerator {
     /Faults detected:\s*0\s*\/\s*5/i;
   private static readonly HIDDEN_HINTS_LIMIT_PATTERN =
     /\d+\s+additional hints available but not shown\.[\s\S]*You are limited to 1 hint total/i;
-  private static readonly INSTRUCTOR_CATEGORY_PATTERN =
-    /instructor[_\s-]?test[_\s-]?failure/i;
-  private static readonly INSTRUCTOR_NO_DETAIL_SIGNALS = [
-    /additional failing tests not shown/i,
-    /hints?\s+available\s+but\s+not\s+shown/i,
-    /tests passed:\s*\d+\s*\/\s*\d+/i,
-  ];
-  private static readonly INSTRUCTOR_ACTIONABLE_DETAIL_SIGNALS = [
-    /org\.opentest4j\.AssertionFailedError/i,
-    /AssertionFailedError/i,
-    /expected:\s*</i,
-    /but was:\s*</i,
-    /\bat\s+app\/\//i,
-    /\bat\s+[\w.$]+\([^)]*:\d+\)/i,
-    /\b(?:NullPointerException|IllegalArgumentException|RuntimeException|Exception)\b/i,
-  ];
 
   constructor(
     assignmentUrl: string = "https://neu-pdi.github.io/cs3100-public-resources/assignments/cyb1-recipes",
@@ -92,10 +151,11 @@ export class PromptGenerator {
     return `
 This is the assignment the student is working on: ${this.assignmentUrl}
 
-Category: ${row.category}
-Test Name: ${row.test_name}
+Assignment Title: ${row.title}
+Prompt: ${row.name}
+Score: ${row.score}/${row.max_score}
 LOG:
-${row.clean_error_text}`;
+${row.output}`;
   }
 
   /**
@@ -109,12 +169,12 @@ ${row.clean_error_text}`;
    * Get the reason a row should be skipped, or null if it should be processed
    */
   getSkipReason(row: EvaluationRow): string | null {
-    const text = row.clean_error_text ?? "";
-    const combinedText = `${row.category}\n${row.error_type}\n${row.canonical_key}\n${text}`;
-
-    if (row.error_type === "DEPENDENCY_NOT_MET") {
-      return "DEPENDENCY_NOT_MET category";
+    if (!row.is_active) {
+      return "inactive row";
     }
+
+    const text = row.output ?? "";
+    const combinedText = `${row.title}\n${row.name}\n${text}`;
 
     if (PromptGenerator.DEPENDENCY_NOT_GRADED_PATTERN.test(combinedText)) {
       return "Dependency gating system message";
@@ -131,36 +191,6 @@ ${row.clean_error_text}`;
       return "Mutation 0/5 with hidden hints";
     }
 
-    if (this.shouldSkipInstructorNoDetail(row, combinedText)) {
-      return "Instructor failure without actionable detail";
-    }
-
     return null;
-  }
-
-  private shouldSkipInstructorNoDetail(
-    row: EvaluationRow,
-    combinedText: string,
-  ): boolean {
-    const isInstructorRelated =
-      row.error_type === "INSTRUCTOR_TEST_FAILURE" ||
-      PromptGenerator.INSTRUCTOR_CATEGORY_PATTERN.test(combinedText);
-
-    if (!isInstructorRelated) {
-      return false;
-    }
-
-    const hasActionableDetail =
-      PromptGenerator.INSTRUCTOR_ACTIONABLE_DETAIL_SIGNALS.some((pattern) =>
-        pattern.test(combinedText),
-      );
-
-    if (hasActionableDetail) {
-      return false;
-    }
-
-    return PromptGenerator.INSTRUCTOR_NO_DETAIL_SIGNALS.some((pattern) =>
-      pattern.test(combinedText),
-    );
   }
 }

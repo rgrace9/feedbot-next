@@ -34,9 +34,9 @@ export const fetchAssignmentSpec = async (specUrl: string) => {
   }
 };
 
-(async () => {
-  const assignmentSpecUrl =
-    "https://raw.githubusercontent.com/neu-pdi/cs3100-public-resources/refs/heads/main/assignments/cyb1-recipes.md";
-  const res = await fetchAssignmentSpec(assignmentSpecUrl);
-  console.log("\nFetched assignment spec content length:", res?.length);
-})();
+// (async () => {
+//   const assignmentSpecUrl =
+//     "https://raw.githubusercontent.com/neu-pdi/cs3100-public-resources/refs/heads/main/assignments/cyb1-recipes.md";
+//   const res = await fetchAssignmentSpec(assignmentSpecUrl);
+//   console.log("\nFetched assignment spec content length:", res?.length);
+// })();

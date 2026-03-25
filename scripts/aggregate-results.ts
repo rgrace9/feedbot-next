@@ -4,6 +4,11 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
 import { DATASET } from "../constants/spreadsheets";
+import {
+  normalizeEvaluationRow,
+  type EvaluationRow,
+  type RawEvaluationRow,
+} from "./classes/PromptGenerator.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -61,17 +66,6 @@ function discoverProgressFiles(): Array<{
   return progressFiles;
 }
 
-// Interfaces
-interface EvaluationRow {
-  category: string;
-  test_name: string;
-  error_type: string;
-  count: string;
-  fingerprint: string;
-  canonical_key: string;
-  clean_error_text: string;
-}
-
 interface StateFile {
   processed: {
     [fingerprint: string]: {
@@ -89,10 +83,13 @@ interface StateFile {
 
 interface AggregatedResult {
   fingerprint: string;
-  category: string;
-  test_name: string;
-  error_type: string;
-  clean_error_text: string;
+  name: string;
+  score: string;
+  max_score: string;
+  is_active: string;
+  title: string;
+  profile_id: string;
+  original_error_output: string;
   [key: string]: string; // For model+prompt combination columns
 }
 
@@ -110,116 +107,36 @@ function loadStateFile(filePath: string): StateFile | null {
   return null;
 }
 
-function escapeInlineMarkdown(value: string): string {
-  return value.replace(/\r?\n/g, " ").replace(/\|/g, "\\|");
-}
-
-function normalizeMultiline(value: string): string {
-  return value.replace(/\r\n/g, "\n").trim();
-}
-
 function buildMarkdownReport(
   resultArray: AggregatedResult[],
-  totalRows: number,
   progressFiles: Array<{ model: string; prompt: string; filename: string }>,
 ): string {
   const lines: string[] = [];
-  lines.push("# FeedBot Hint Generation Analysis");
-  lines.push("");
-  lines.push(`📊 **Dataset**: ${totalRows} unique errors`);
-  lines.push(
-    `🤖 **Models**: ${progressFiles.length} model+prompt combinations`,
-  );
-  lines.push("");
+  lines.push("# Error Output and Model Response");
 
-  // Summary table
-  lines.push("## Summary");
-  lines.push("| Model + Prompt | Processed | Coverage |");
-  lines.push("|---|---|---|");
+  let resultIndex = 1;
+
   for (const { model, prompt } of progressFiles) {
     const columnName = `${model}_${prompt}`;
-    const count = resultArray.filter(
-      (row) => row[columnName] && row[columnName].trim() !== "",
-    ).length;
-    const percentage = ((count / totalRows) * 100).toFixed(1);
-    lines.push(
-      `| ${model} + ${prompt} | ${count}/${totalRows} | ${percentage}% |`,
-    );
-  }
-  lines.push("");
 
-  // Group by error for comparison
-  lines.push("## Error Analysis & Model Comparison");
-  lines.push(
-    "*Organized by error type for easy comparison across models/prompts*",
-  );
-  lines.push("");
-
-  // Group errors by category for better organization
-  const errorsByCategory: { [category: string]: AggregatedResult[] } = {};
-  resultArray.forEach((row) => {
-    const key = row.error_type;
-    if (!errorsByCategory[key]) {
-      errorsByCategory[key] = [];
-    }
-    const bucket = errorsByCategory[key];
-    if (bucket) {
-      bucket.push(row);
-    }
-  });
-
-  for (const [errorType, errors] of Object.entries(errorsByCategory)) {
-    lines.push(
-      `### ${errorType
-        .replace(/_/g, " ")
-        .toLowerCase()
-        .replace(/\b\w/g, (l) => l.toUpperCase())}`,
-    );
-    lines.push("");
-
-    for (const error of errors) {
-      lines.push(`#### ${error.category}`);
-      lines.push(`**Error Context**: \`${error.clean_error_text}\``);
-      lines.push(`**Fingerprint**: \`${error.fingerprint}\``);
-      lines.push("");
-
-      // Show all model responses for this error
-      const hasResponses = progressFiles.some(({ model, prompt }) => {
-        const columnName = `${model}_${prompt}`;
-        return error[columnName] && error[columnName].trim() !== "";
-      });
-
-      if (!hasResponses) {
-        lines.push("*No responses generated for this error.*");
-        lines.push("");
+    for (const row of resultArray) {
+      const modelOutput = row[columnName];
+      if (!modelOutput || modelOutput.trim() === "") {
         continue;
       }
 
-      for (const { model, prompt } of progressFiles) {
-        const columnName = `${model}_${prompt}`;
-        const hint = error[columnName];
-        const tokens = error[`${columnName}_tokens`];
-        const cost = error[`${columnName}_cost_usd`];
-
-        if (hint && hint.trim() !== "") {
-          lines.push(`**${model} + ${prompt}:**`);
-          if (tokens || cost) {
-            const usage = [
-              tokens && `Tokens: ${tokens}`,
-              cost && `Cost: $${cost}`,
-            ]
-              .filter(Boolean)
-              .join(" | ");
-            lines.push(`*${usage}*`);
-          }
-          lines.push("```");
-          lines.push(normalizeMultiline(hint));
-          lines.push("```");
-          lines.push("");
-        }
-      }
-      lines.push("---");
       lines.push("");
+      lines.push(`## Result ${resultIndex++}`);
+      lines.push("");
+      lines.push("### Original Error Output");
+      lines.push("````text");
+      lines.push(row.original_error_output);
+      lines.push("````");
+      lines.push("");
+      lines.push("### Model Output Message");
+      lines.push("````text");
+      lines.push(modelOutput);
+      lines.push("````");
     }
   }
 
@@ -255,14 +172,18 @@ function buildMarkdownReport(
   // Load original CSV to get error metadata
   console.log("Loading evaluation dataset...");
   const csvContent = readFileSync(CSV_PATH, "utf-8");
-  const originalRows: EvaluationRow[] = parse(csvContent, {
+  const originalRows = parse(csvContent, {
     columns: true,
     skip_empty_lines: true,
-  });
+  }) as RawEvaluationRow[];
+
+  const normalizedRows: EvaluationRow[] = originalRows.map((row) =>
+    normalizeEvaluationRow(row),
+  );
 
   // Create lookup map for error metadata
   const errorMetadata: { [fingerprint: string]: EvaluationRow } = {};
-  originalRows.forEach((row) => {
+  normalizedRows.forEach((row) => {
     errorMetadata[row.fingerprint] = row;
   });
 
@@ -294,10 +215,13 @@ function buildMarkdownReport(
 
         aggregatedResults[fingerprint] = {
           fingerprint,
-          category: metadata.category,
-          test_name: metadata.test_name,
-          error_type: metadata.error_type,
-          clean_error_text: metadata.clean_error_text,
+          name: metadata.name,
+          score: metadata.score,
+          max_score: metadata.max_score,
+          is_active: String(metadata.is_active),
+          title: metadata.title,
+          profile_id: metadata.profile_id,
+          original_error_output: metadata.output,
         };
 
         // Initialize all model+prompt columns as empty
@@ -326,23 +250,26 @@ function buildMarkdownReport(
     });
   }
 
-  // Convert to array and sort by category, then test_name
+  // Convert to array and sort by title, then prompt name
   const resultArray = Object.values(aggregatedResults);
   resultArray.sort((a, b) => {
-    if (a.category !== b.category) {
-      return a.category.localeCompare(b.category);
+    if (a.title !== b.title) {
+      return a.title.localeCompare(b.title);
     }
-    return a.test_name.localeCompare(b.test_name);
+    return a.name.localeCompare(b.name);
   });
 
   // Generate CSV
   console.log("Generating CSV...");
   const csvHeaders = [
     "fingerprint",
-    "category",
-    "test_name",
-    "error_type",
-    "clean_error_text",
+    "name",
+    "score",
+    "max_score",
+    "is_active",
+    "title",
+    "profile_id",
+    "original_error_output",
   ];
 
   // Add hint, token, and cost columns for each model+prompt combination
@@ -361,11 +288,7 @@ function buildMarkdownReport(
   writeFileSync(OUTPUT_PATH, csvData, "utf-8");
 
   // Write Markdown file
-  const markdownReport = buildMarkdownReport(
-    resultArray,
-    resultArray.length,
-    progressFiles,
-  );
+  const markdownReport = buildMarkdownReport(resultArray, progressFiles);
   writeFileSync(MARKDOWN_PATH, markdownReport, "utf-8");
 
   // Print summary

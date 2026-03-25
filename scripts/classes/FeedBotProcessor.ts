@@ -6,8 +6,13 @@ import {
   type ModelConfig,
   type UsageMetadata,
 } from "./ModelManager.js";
-import type { EvaluationRow } from "./PromptGenerator.js";
-import { PromptGenerator } from "./PromptGenerator.js";
+import {
+  normalizeEvaluationRow,
+  PromptGenerator,
+  REQUIRED_DATASET_COLUMNS,
+  type EvaluationRow,
+  type RawEvaluationRow,
+} from "./PromptGenerator.js";
 import { ResultsAggregator } from "./ResultsAggregator.js";
 
 /**
@@ -134,10 +139,27 @@ export class FeedBotProcessor {
    */
   private loadCSV(): EvaluationRow[] {
     const csvContent = readFileSync(this.config.csvPath, "utf-8");
-    return parse(csvContent, {
+    const rows = parse(csvContent, {
       columns: true,
       skip_empty_lines: true,
-    });
+    }) as RawEvaluationRow[];
+
+    if (rows.length === 0) {
+      return [];
+    }
+
+    const firstRow = rows[0] as Record<string, unknown>;
+    const missingColumns = REQUIRED_DATASET_COLUMNS.filter(
+      (column) => !(column in firstRow),
+    );
+
+    if (missingColumns.length > 0) {
+      throw new Error(
+        `Dataset is missing required columns: ${missingColumns.join(", ")}. Expected columns: ${REQUIRED_DATASET_COLUMNS.join(", ")}`,
+      );
+    }
+
+    return rows.map((row) => normalizeEvaluationRow(row));
   }
 
   /**
@@ -199,6 +221,10 @@ export class FeedBotProcessor {
     console.log(`${prefix} ${message}`);
   }
 
+  private rowLabel(row: EvaluationRow): string {
+    return `${row.title} :: ${row.name}`;
+  }
+
   /**
    * Process a single row with rate limiting and retry logic
    */
@@ -222,7 +248,7 @@ export class FeedBotProcessor {
       this.log(
         model,
         promptVariation,
-        `Skipping row (${skipReason}): ${row.category}`,
+        `Skipping row (${skipReason}): ${this.rowLabel(row)}`,
         index,
         total,
       );
@@ -235,7 +261,7 @@ export class FeedBotProcessor {
       this.log(
         model,
         promptVariation,
-        `Already processed: ${row.category}`,
+        `Already processed: ${this.rowLabel(row)}`,
         index,
         total,
       );
@@ -264,7 +290,7 @@ export class FeedBotProcessor {
       this.log(
         model,
         promptVariation,
-        `Processing: ${row.category}`,
+        `Processing: ${this.rowLabel(row)}`,
         index,
         total,
       );
@@ -301,7 +327,7 @@ export class FeedBotProcessor {
       }
     } catch (error) {
       console.error(
-        `[${model}] [${promptVariation}] [${index}/${total}] ERROR processing ${row.category}`,
+        `[${model}] [${promptVariation}] [${index}/${total}] ERROR processing ${this.rowLabel(row)}`,
       );
       console.error(`  Fingerprint: ${row.fingerprint}`);
       console.error(`  Error:`, error instanceof Error ? error.message : error);

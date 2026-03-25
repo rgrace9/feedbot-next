@@ -1,12 +1,4 @@
-import * as fs from "fs";
-import { dirname, join } from "path";
-import { fileURLToPath } from "url";
 import { fetchAssignmentSpec } from "../scripts/fetch-assignment-spec.js";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const filePath = join(__dirname, "assignment4.md");
-const readmeContent = fs.readFileSync(filePath, "utf8");
 
 export const PROMPT_VARIATIONS = [
   // "checklist-strategy",
@@ -265,5 +257,3 @@ Write a 3–4 sentence paragraph that guides the student toward fixing the earli
 
 The output must read as warm, direct advice — not a structured report.
 </strategy>`;
-
-console.log(`${BASE_PROMPT}`);
