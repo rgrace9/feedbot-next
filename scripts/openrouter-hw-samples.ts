@@ -1,16 +1,28 @@
+import { randomBytes } from "crypto";
 import { parse } from "csv-parse/sync";
+import * as dotenv from "dotenv";
 import { mkdirSync, readFileSync, writeFileSync } from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
-import * as dotenv from "dotenv";
-import { DATASET } from "../constants/spreadsheets.js";
 import { OPENROUTER_MODELS } from "../constants/models.js";
-import { BASE_PROMPT, CHAIN_OF_THOUGHT_PROMPT } from "../constants/promptData.js";
+import {
+  BASE_PROMPT,
+  CHAIN_OF_THOUGHT_PROMPT,
+} from "../constants/promptData.js";
+import { DATASET } from "../constants/spreadsheets.js";
 import { OpenRouterModelClient } from "./classes/providers/OpenRouterModelClient.js";
 
 dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+function formatRunFolder(d: Date): string {
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const yyyy = String(d.getFullYear());
+  const suffix = randomBytes(3).toString("hex"); // 6-char run id
+  return `${mm}${dd}${yyyy}-${suffix}`;
+}
 
 type HwSampleRow = {
   name: string;
@@ -154,8 +166,14 @@ function buildMarkdown(
       if (i > 0) {
         parts.push("---", "");
       }
-      parts.push("### Error", "", fencedTextBlock(r.errorOutput), "");
-      parts.push("### LLM Response", "", fencedTextBlock(r.response));
+      parts.push(`### Result ${i + 1}`, "");
+      parts.push(
+        "#### Original Error Output",
+        "",
+        fencedTextBlock(r.errorOutput),
+        "",
+      );
+      parts.push("#### Model Output Message", "", fencedTextBlock(r.response));
       return parts.join("\n");
     })
     .join("\n");
@@ -207,12 +225,22 @@ function buildMarkdown(
 
   const toProcess = args.limit ? rows.slice(0, args.limit) : rows;
   mkdirSync(args.outputDir, { recursive: true });
+  const runOutputDir = path.join(args.outputDir, formatRunFolder(new Date()));
+  mkdirSync(runOutputDir, { recursive: true });
 
   const jsonlPath = path.join(args.outputDir, "openrouter_hw_samples.jsonl");
   const jsonPath = path.join(args.outputDir, "openrouter_hw_samples.json");
   const mdPath = path.join(args.outputDir, "openrouter_hw_samples.md");
   const promptDebugPath = path.join(
     args.outputDir,
+    "openrouter_hw_samples_prompt_debug.txt",
+  );
+
+  const runJsonlPath = path.join(runOutputDir, "openrouter_hw_samples.jsonl");
+  const runJsonPath = path.join(runOutputDir, "openrouter_hw_samples.json");
+  const runMdPath = path.join(runOutputDir, "openrouter_hw_samples.md");
+  const runPromptDebugPath = path.join(
+    runOutputDir,
     "openrouter_hw_samples_prompt_debug.txt",
   );
 
@@ -228,6 +256,7 @@ function buildMarkdown(
   console.log(`JSONL: ${jsonlPath}`);
   console.log(`JSON: ${jsonPath}`);
   console.log(`MD: ${mdPath}`);
+  console.log(`Run folder: ${runOutputDir}`);
   if (args.dumpPrompt) {
     console.log(
       `Prompt debug: ${promptDebugPath}${args.dumpIndex !== undefined ? ` (rowIndex=${args.dumpIndex})` : ""}`,
@@ -264,6 +293,7 @@ function buildMarkdown(
           "",
         ].join("\n");
         writeFileSync(promptDebugPath, debugText, "utf-8");
+        writeFileSync(runPromptDebugPath, debugText, "utf-8");
       }
       try {
         const res = await client.process(args.model, messages, 0.2);
@@ -296,6 +326,13 @@ function buildMarkdown(
     "utf-8",
   );
   writeFileSync(jsonPath, JSON.stringify(ordered, null, 2) + "\n", "utf-8");
+  writeFileSync(
+    runJsonlPath,
+    ordered.map((r) => JSON.stringify(r)).join("\n") +
+      (ordered.length ? "\n" : ""),
+    "utf-8",
+  );
+  writeFileSync(runJsonPath, JSON.stringify(ordered, null, 2) + "\n", "utf-8");
 
   const okForMarkdown = ordered
     .filter((r) => r.kind === "ok")
@@ -307,9 +344,9 @@ function buildMarkdown(
     }));
 
   writeFileSync(mdPath, buildMarkdown(okForMarkdown), "utf-8");
+  writeFileSync(runMdPath, buildMarkdown(okForMarkdown), "utf-8");
 
   console.log(
     `Done. ok=${ordered.filter((r) => r.kind === "ok").length} error=${ordered.filter((r) => r.kind === "error").length}`,
   );
 })();
-
